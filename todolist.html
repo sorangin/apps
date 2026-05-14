@@ -164,7 +164,7 @@
 
             #dailies-content {
                 display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 30px;
                 align-items: flex-start;
             }
@@ -1010,6 +1010,185 @@
             background: #2d2d30;
             margin: 4px 0;
         }
+
+        /* Daily Score Bar */
+        .daily-score-bar {
+            background: #161618;
+            border: 1px solid #2d2d30;
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin: 8px 4px 20px 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .daily-score-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.03;
+            pointer-events: none;
+        }
+
+        .score-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .score-label {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #71717a;
+        }
+
+        .score-rating {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 3px 10px;
+            border-radius: 20px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .score-track {
+            width: 100%;
+            height: 8px;
+            background: #27272a;
+            border-radius: 4px;
+            position: relative;
+            transition: box-shadow 0.4s;
+        }
+
+        .score-track.perfect {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.6), 
+                        0 0 5px rgba(34, 197, 94, 0.4);
+            animation: scorePerfectPulse 2s infinite alternate;
+        }
+
+        @keyframes scorePerfectPulse {
+            from { box-shadow: 0 0 8px rgba(34, 197, 94, 0.3); }
+            to { box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s;
+            position: relative;
+            min-width: 0;
+            overflow: hidden; /* Keep shimmer inside */
+        }
+
+        .score-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+            animation: scoreShimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes scoreShimmer {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .score-marker {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.15);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .score-details {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .score-points {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            transition: color 0.4s;
+        }
+
+        .score-points span {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.4;
+        }
+
+        .score-percent {
+            font-size: 13px;
+            font-weight: 700;
+            opacity: 0.6;
+        }
+
+        /* Scoreboard Tooltip */
+        .score-header { position: relative; }
+        .score-rating { cursor: help; }
+        
+        .score-tooltip {
+            position: fixed;
+            background: #18181b;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 12px;
+            width: 200px;
+            box-shadow: 0 15px 40px -10px rgba(0,0,0,0.8);
+            z-index: 99999;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .score-tooltip.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            padding: 4px 0;
+        }
+        .tooltip-label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .tooltip-pts { font-weight: 800; opacity: 0.8; }
+
+        /* Point Float Animation */
+        .point-float {
+            position: fixed;
+            pointer-events: none;
+            color: #fbbf24;
+            font-weight: 900;
+            font-size: 16px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 10000;
+            animation: pointFloatUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes pointFloatUp {
+            0% { transform: translateY(0); opacity: 0; scale: 0.5; }
+            20% { transform: translateY(-10px); opacity: 1; scale: 1.2; }
+            100% { transform: translateY(-40px); opacity: 0; scale: 1; }
+        }
     </style>
 </head>
 
@@ -1707,6 +1886,7 @@
             data.dailies.forEach(d => {
                 if (!d.section) d.section = 'Daily';
                 if (d.section === 'Dailies' && !data.dailySections.some(s => s.id === 'Dailies')) d.section = 'Daily';
+                if (d.points === undefined) d.points = 1;
             });
 
             // Shopping Categories
@@ -2338,6 +2518,113 @@
             }
         }
 
+        // ── Daily Score System ──
+        function calculateDailyScore() {
+            // Only count items in sections with interval === 'daily'
+            const dailySectionIds = new Set();
+            db.dailySections.forEach(s => {
+                if ((s.interval || 'daily') === 'daily') dailySectionIds.add(s.id);
+            });
+
+            let earned = 0, total = 0;
+            db.dailies.forEach(item => {
+                if (!dailySectionIds.has(item.section)) return;
+                const pts = item.points || 1;
+                total += pts;
+                if (item.done) earned += pts;
+            });
+
+            const pct = total > 0 ? Math.round((earned / total) * 100) : 0;
+            return { earned, total, pct };
+        }
+
+        function getDailyRating(pct) {
+            if (pct >= 85) return { label: 'Excellent', color: '#4ade80', bg: 'rgba(74, 222, 128, 0.1)', barColor: 'linear-gradient(90deg, #22c55e, #4ade80)' };
+            if (pct >= 60) return { label: 'Solid', color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.1)', barColor: 'linear-gradient(90deg, #3b82f6, #60a5fa)' };
+            if (pct >= 40) return { label: 'Maintenance', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.1)', barColor: 'linear-gradient(90deg, #f59e0b, #fbbf24)' };
+            return { label: 'Recovery', color: '#f87171', bg: 'rgba(248, 113, 113, 0.1)', barColor: 'linear-gradient(90deg, #ef4444, #f87171)' };
+        }
+
+        function updateScoreBar() {
+            const bar = document.getElementById('daily-score-bar');
+            if (!bar) return;
+
+            const { earned, total, pct } = calculateDailyScore();
+
+            if (total === 0) {
+                bar.style.display = 'none';
+                return;
+            }
+
+            bar.style.display = '';
+            const rating = getDailyRating(pct);
+
+            const ratingEl = document.getElementById('score-rating');
+            ratingEl.textContent = rating.label;
+            ratingEl.style.color = rating.color;
+            ratingEl.style.background = rating.bg;
+
+            // Handle scoreboard tooltip
+            let tooltip = document.getElementById('score-tooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.id = 'score-tooltip';
+                tooltip.className = 'score-tooltip';
+                document.body.appendChild(tooltip);
+            }
+
+            if (tooltip) {
+                const exc = Math.ceil(total * 0.85);
+                const sol = Math.ceil(total * 0.60);
+                const mai = Math.ceil(total * 0.40);
+                
+                tooltip.innerHTML = `
+                    <div class="text-[10px] uppercase font-black opacity-40 mb-2 tracking-widest text-center">Scoreboard</div>
+                    <div class="tooltip-row" style="color:#4ade80">
+                        <span class="tooltip-label">Excellent</span>
+                        <span class="tooltip-pts">${exc}+ pts</span>
+                    </div>
+                    <div class="tooltip-row" style="color:#60a5fa">
+                        <span class="tooltip-label">Solid</span>
+                        <span class="tooltip-pts">${sol}-${exc-1} pts</span>
+                    </div>
+                    <div class="tooltip-row" style="color:#fbbf24">
+                        <span class="tooltip-label">Maintenance</span>
+                        <span class="tooltip-pts">${mai}-${sol-1} pts</span>
+                    </div>
+                    <div class="tooltip-row" style="color:#f87171">
+                        <span class="tooltip-label">Recovery</span>
+                        <span class="tooltip-pts">&lt;${mai} pts</span>
+                    </div>
+                `;
+
+                ratingEl.onmouseenter = () => tooltip.classList.add('active');
+                ratingEl.onmousemove = (e) => {
+                    const x = e.clientX + 15;
+                    const y = e.clientY + 15;
+                    const maxX = window.innerWidth - tooltip.offsetWidth - 20;
+                    const maxY = window.innerHeight - tooltip.offsetHeight - 20;
+                    tooltip.style.left = Math.min(x, maxX) + 'px';
+                    tooltip.style.top = Math.min(y, maxY) + 'px';
+                };
+                ratingEl.onmouseleave = () => tooltip.classList.remove('active');
+            }
+
+            const track = bar.querySelector('.score-track');
+            if (track) track.classList.toggle('perfect', pct === 100);
+
+            const fill = document.getElementById('score-fill');
+            fill.style.width = pct + '%';
+            fill.style.background = rating.barColor;
+
+            const pointsEl = document.getElementById('score-points');
+            pointsEl.innerHTML = `${earned}<span> / ${total}</span>`;
+            pointsEl.style.color = rating.color;
+
+            const pctEl = document.getElementById('score-percent');
+            pctEl.textContent = pct + '%';
+        }
+
         function _render() {
             const listC = document.getElementById('list-content'), archC = document.getElementById('archive-content'), shopC = document.getElementById('shop-container'), dailyC = document.getElementById('dailies-content');
             if (!listC || !shopC || !dailyC) return;
@@ -2441,9 +2728,34 @@
                 archiveArea.classList.toggle('hidden', comp.length === 0);
             } else if (tab === 'dailies') {
                 if (!dailyC.querySelector('#daily-col-1')) {
-                    dailyC.innerHTML = '<div id="daily-col-1" class="main-col"></div><div id="daily-col-2" class="main-col"></div><div id="daily-col-3" class="main-col"></div>';
+                    dailyC.innerHTML = '<div id="daily-col-1" class="main-col"></div><div id="daily-col-2" class="main-col"></div>';
                 }
-                const colArr = [dailyC.querySelector('#daily-col-1'), dailyC.querySelector('#daily-col-2'), dailyC.querySelector('#daily-col-3')];
+                const colArr = [dailyC.querySelector('#daily-col-1'), dailyC.querySelector('#daily-col-2')];
+
+                // Ensure score bar is inside the first column
+                let scoreBar = document.getElementById('daily-score-bar');
+                if (!scoreBar) {
+                    scoreBar = document.createElement('div');
+                    scoreBar.id = 'daily-score-bar';
+                    scoreBar.className = 'daily-score-bar';
+                    scoreBar.style.display = 'none';
+                    scoreBar.innerHTML = `
+                        <div class="score-header">
+                            <span class="score-label">Today's Score</span>
+                            <span id="score-rating" class="score-rating"></span>
+                        </div>
+                        <div class="score-track">
+                            <div id="score-fill" class="score-fill" style="width:0%"></div>
+                            <div class="score-marker" style="left:40%" title="Maintenance (40%)"></div>
+                            <div class="score-marker" style="left:60%" title="Solid (60%)"></div>
+                            <div class="score-marker" style="left:85%" title="Excellent (85%)"></div>
+                        </div>
+                        <div class="score-details">
+                            <span id="score-points" class="score-points">0<span> / 0</span></span>
+                            <span id="score-percent" class="score-percent">0%</span>
+                        </div>`;
+                }
+                colArr[0].prepend(scoreBar);
                 
                 colArr.forEach(col => {
                     if (col) Array.from(col.querySelectorAll('.section-block')).forEach(block => {
@@ -2453,9 +2765,10 @@
                 });
 
                 db.dailySections.forEach((sec, secIdx) => {
-                    const targetCol = colArr[sec.col !== undefined && sec.col < colArr.length ? sec.col : secIdx % 3];
+                    const targetCol = colArr[sec.col !== undefined && sec.col < colArr.length ? sec.col : secIdx % 2];
                     renderDailiesSection(targetCol, sec.title, sec.id, sec.color || '#ffffff', itemMap, secIdx === 0, orphaned);
                 });
+                updateScoreBar();
             } else if (tab === 'shopping') {
                 renderShop(shopC, itemMap, orphaned);
             }
@@ -2755,14 +3068,56 @@
                         } else if (e.target === txt) allowEdit = true;
 
                         if (allowEdit) { txt.contentEditable = true; txt.focus(); }
-                        else if (e.target.closest('.chk-box') || isShop) { currentI.lastClick = now; toggle(idx); }
+                        else if (e.target.closest('.chk-box') || isShop) { currentI.lastClick = now; toggle(idx, e); }
                     }
                 };
+
+                // Right-click / long-press to edit points (dailies only)
+                if (isDailies) {
+                    card.oncontextmenu = (e) => {
+                        e.preventDefault();
+                        const idx = db.dailies.findIndex(x => x.uid == card.getAttribute('data-uid'));
+                        if (idx < 0) return;
+                        showPrompt('Point Value', String(db.dailies[idx].points || 1), (v) => {
+                            const n = parseInt(v);
+                            if (!isNaN(n) && n >= 0 && n <= 99) {
+                                db.dailies[idx].points = n;
+                                db.dailies[idx].m = Date.now();
+                                saveLocal(); pushToCloud(); render();
+                            }
+                        });
+                    };
+                    let _lpTimer = null, _lpStartX = 0, _lpStartY = 0;
+                    card.addEventListener('touchstart', (e) => {
+                        _lpStartX = e.touches[0].clientX; _lpStartY = e.touches[0].clientY;
+                        _lpTimer = setTimeout(() => {
+                            _lpTimer = null;
+                            const idx = db.dailies.findIndex(x => x.uid == card.getAttribute('data-uid'));
+                            if (idx < 0) return;
+                            if (navigator.vibrate) navigator.vibrate(50);
+                            showPrompt('Point Value', String(db.dailies[idx].points || 1), (v) => {
+                                const n = parseInt(v);
+                                if (!isNaN(n) && n >= 0 && n <= 99) {
+                                    db.dailies[idx].points = n;
+                                    db.dailies[idx].m = Date.now();
+                                    saveLocal(); pushToCloud(); render();
+                                }
+                            });
+                        }, 600);
+                    }, { passive: true });
+                    card.addEventListener('touchmove', (e) => {
+                        if (_lpTimer && (Math.abs(e.touches[0].clientX - _lpStartX) > 10 || Math.abs(e.touches[0].clientY - _lpStartY) > 10)) {
+                            clearTimeout(_lpTimer); _lpTimer = null;
+                        }
+                    }, { passive: true });
+                    card.addEventListener('touchend', () => { if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; } });
+                    card.addEventListener('touchcancel', () => { if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; } });
+                }
             }
 
             // Only update DOM if needed
-            const lastDone = card.getAttribute('data-last-done'), lastText = card.getAttribute('data-last-text'), lastCat = card.getAttribute('data-last-cat'), lastSec = card.getAttribute('data-last-sec');
-            const needsFullUpdate = !card.innerHTML || lastDone !== String(i.done) || lastCat !== String(i.cat) || lastSec !== String(i.section) || lastText !== i.text;
+            const lastDone = card.getAttribute('data-last-done'), lastText = card.getAttribute('data-last-text'), lastCat = card.getAttribute('data-last-cat'), lastSec = card.getAttribute('data-last-sec'), lastPts = card.getAttribute('data-last-pts');
+            const needsFullUpdate = !card.innerHTML || lastDone !== String(i.done) || lastCat !== String(i.cat) || lastSec !== String(i.section) || lastText !== i.text || (isDailies && lastPts !== String(i.points || 1));
 
             card.className = `group item-card ${i.done ? 'done' : ''} ${!isShop ? 'flex items-center p-3' : 'flex flex-col items-center justify-center p-2 h-14 text-center'}`;
             card.style.opacity = (isShop && i.cat === 'trash') ? '0.35' : '';
@@ -2790,6 +3145,7 @@
                 card.setAttribute('data-last-text', i.text);
                 card.setAttribute('data-last-cat', i.cat);
                 card.setAttribute('data-last-sec', i.section);
+                if (isDailies) card.setAttribute('data-last-pts', i.points || 1);
             }
 
             if (card.parentElement !== p) p.appendChild(card);
@@ -3004,11 +3360,29 @@
         }
 
         // REVERT: Render with animation enabled (default)
-        function toggle(idx) {
+        function showPointsHUD(x, y, points, isPositive) {
+            const el = document.createElement('div');
+            el.className = 'point-float';
+            el.innerText = (isPositive ? '+' : '-') + points;
+            if (!isPositive) el.style.color = '#ef4444'; // Red for negative
+            el.style.left = x + 'px';
+            el.style.top = (y - 20) + 'px'; // Start 20px higher
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        // REVERT: Render with animation enabled (default)
+        function toggle(idx, e) {
             if (idx > -1) {
-                db[tab][idx].done = !db[tab][idx].done;
-                db[tab][idx].m = Date.now();
-                if (db[tab][idx].done) db[tab][idx].doneAt = Date.now();
+                const item = db[tab][idx];
+                item.done = !item.done;
+                item.m = Date.now();
+                if (item.done) item.doneAt = Date.now();
+                
+                if (tab === 'dailies' && e) {
+                    showPointsHUD(e.clientX, e.clientY, item.points || 1, item.done);
+                }
+                
                 render();
                 pushToCloud(true);
             }
@@ -3603,7 +3977,7 @@
                     if (tab === 'shopping') {
                         db.shopping.push({ text: v, done: false, uid: uid, m: m, cat: activeShopCat || 'misc' });
                     } else if (tab === 'dailies') {
-                        db.dailies.unshift({ text: v, done: false, uid: uid, m: m, section: activeDailySection, interval: 'daily' });
+                        db.dailies.unshift({ text: v, done: false, uid: uid, m: m, section: activeDailySection, interval: 'daily', points: 1 });
                     } else {
                         db.tasks.unshift({ text: v, done: false, uid: uid, m: m, section: activeTaskSection });
                     }
@@ -3863,7 +4237,7 @@
                         if (tab === 'shopping') {
                             db.shopping.push({ text: v, done: false, uid: uid, m: m, cat: activeShopCat || 'misc' });
                         } else if (tab === 'dailies') {
-                            db.dailies.unshift({ text: v, done: false, uid: uid, m: m, section: activeDailySection, interval: 'daily' });
+                            db.dailies.unshift({ text: v, done: false, uid: uid, m: m, section: activeDailySection, interval: 'daily', points: 1 });
                         } else {
                             db.tasks.unshift({ text: v, done: false, uid: uid, m: m, section: activeTaskSection });
                         }
