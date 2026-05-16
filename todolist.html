@@ -660,12 +660,59 @@
             pointer-events: none;
         }
 
-        #section-nav-up {
-            top: 52px;
-        }
-
         #section-nav-down {
             bottom: calc(68px + var(--keyboard-h));
+        }
+
+        .jump-menu {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            bottom: calc(100px + var(--keyboard-h));
+            background: #18181b;
+            border: 1px solid #2d2d30;
+            border-radius: 16px;
+            width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            padding: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+        .jump-menu.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+        .jump-opt {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: #a1a1aa;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .jump-opt:active {
+            background: #27272a;
+            color: white;
+        }
+        .jump-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
         }
 
         @media (min-width: 768px) {
@@ -1287,10 +1334,8 @@
     </div>
 
     <!-- Section Nav Arrows (mobile) -->
-    <button id="section-nav-up" class="section-nav-btn hidden" onclick="scrollToSection(-1)" aria-label="Previous section">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-    </button>
-    <button id="section-nav-down" class="section-nav-btn hidden" onclick="scrollToSection(1)" aria-label="Next section">
+    <div id="jump-menu" class="jump-menu"></div>
+    <button id="section-nav-down" class="section-nav-btn hidden" onclick="toggleJumpMenu(event)" aria-label="Quick jump">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
     </button>
 
@@ -3409,73 +3454,86 @@
             }
         }
 
-        function scrollToSection(direction) {
+        function toggleJumpMenu(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('jump-menu');
+            if (!menu) return;
+
+            if (menu.classList.contains('active')) {
+                menu.classList.remove('active');
+            } else {
+                updateJumpMenu();
+                menu.classList.add('active');
+            }
+        }
+
+        function updateJumpMenu() {
+            const menu = document.getElementById('jump-menu');
+            if (!menu) return;
+
             const pane = document.getElementById(tab + '-pane');
             if (!pane) return;
 
             const headers = Array.from(pane.querySelectorAll('.section-header'));
-            if (headers.length < 2) return;
-
-            // Sort by vertical position
-            const positions = headers.map(h => {
-                const rect = h.getBoundingClientRect();
-                const paneRect = pane.getBoundingClientRect();
-                return { el: h, top: rect.top - paneRect.top + pane.scrollTop };
-            }).sort((a, b) => a.top - b.top);
-
-            const scrollTop = pane.scrollTop;
-            const threshold = 5;
-
-            if (direction > 0) {
-                const next = positions.find(p => p.top > scrollTop + threshold);
-                if (next) pane.scrollTo({ top: next.top, behavior: 'smooth' });
-            } else {
-                const above = positions.filter(p => p.top < scrollTop - threshold);
-                if (above.length > 0) {
-                    pane.scrollTo({ top: above[above.length - 1].top, behavior: 'smooth' });
-                } else {
-                    pane.scrollTo({ top: 0, behavior: 'smooth' });
-                }
+            if (headers.length === 0) {
+                menu.innerHTML = '<div class="text-zinc-600 text-[10px] text-center py-4">No sections</div>';
+                return;
             }
-            // Update button visibility after scroll completes
-            setTimeout(updateSectionNavVisibility, 400);
+
+            const list = tab === 'shopping' ? db.shopCategories : (tab === 'dailies' ? db.dailySections : db.taskSections);
+
+            menu.innerHTML = headers.map(h => {
+                const secId = h.getAttribute('data-sec-id');
+                const sec = list.find(s => s.id === secId) || { title: 'General', color: '#ffffff' };
+                return `
+                    <button class="jump-opt" onclick="scrollToHeader('${secId}')">
+                        <div class="jump-dot" style="background:${sec.color}"></div>
+                        <span class="truncate">${sec.title}</span>
+                    </button>
+                `;
+            }).join('');
         }
 
+        function scrollToHeader(secId) {
+            const pane = document.getElementById(tab + '-pane');
+            if (!pane) return;
+
+            const header = pane.querySelector(`.section-header[data-sec-id="${secId}"]`);
+            if (header) {
+                const rect = header.getBoundingClientRect();
+                const paneRect = pane.getBoundingClientRect();
+                const targetTop = rect.top - paneRect.top + pane.scrollTop;
+                pane.scrollTo({ top: targetTop, behavior: 'smooth' });
+            }
+            document.getElementById('jump-menu').classList.remove('active');
+        }
+
+        // Close jump menu on outside click
+        document.addEventListener('click', () => {
+            const menu = document.getElementById('jump-menu');
+            if (menu) menu.classList.remove('active');
+        });
+
         function updateSectionNavVisibility() {
-            const upBtn = document.getElementById('section-nav-up');
             const downBtn = document.getElementById('section-nav-down');
-            if (!upBtn || !downBtn) return;
+            if (!downBtn) return;
 
             if (tab === 'notes') {
-                upBtn.classList.add('hidden');
                 downBtn.classList.add('hidden');
                 return;
             }
 
             const pane = document.getElementById(tab + '-pane');
-            if (!pane) { upBtn.classList.add('hidden'); downBtn.classList.add('hidden'); return; }
+            if (!pane) { downBtn.classList.add('hidden'); return; }
 
             const headers = Array.from(pane.querySelectorAll('.section-header'));
             if (headers.length < 2) {
-                upBtn.classList.add('hidden');
                 downBtn.classList.add('hidden');
                 return;
             }
 
-            const positions = headers.map(h => {
-                const rect = h.getBoundingClientRect();
-                const paneRect = pane.getBoundingClientRect();
-                return rect.top - paneRect.top + pane.scrollTop;
-            }).sort((a, b) => a - b);
-
-            const scrollTop = pane.scrollTop;
-            const threshold = 5;
-
-            const hasAbove = positions.some(p => p < scrollTop - threshold);
-            const hasBelow = positions.some(p => p > scrollTop + threshold);
-
-            upBtn.classList.toggle('hidden', !hasAbove);
-            downBtn.classList.toggle('hidden', !hasBelow);
+            // Always show the jump menu button if there are multiple sections
+            downBtn.classList.remove('hidden');
         }
 
         function toggleCat(k, e) {
