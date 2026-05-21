@@ -1306,7 +1306,14 @@
                 <div id="shop-container" class="mt-2 space-y-6"></div>
             </main>
             <main id="dailies-pane" class="view-pane px-2 no-scrollbar" onclick="handleBgClick(event)">
-                <div id="dailies-content" class="cols-wrapper mt-2"></div>
+                <div class="view-pane-flex">
+                    <div class="list-content-side">
+                        <div id="dailies-content" class="cols-wrapper mt-2"></div>
+                    </div>
+                    <div class="notes-wrapper">
+                        <div class="notes-sidebar"></div>
+                    </div>
+                </div>
             </main>
             <main id="notes-pane" class="view-pane px-2 no-scrollbar" onclick="handleBgClick(event)">
                 <div class="notes-mobile-content mt-2">
@@ -1715,6 +1722,7 @@
             if (items.length > 1) {
                 if (maxLen < 20) cols = 3;
                 else if (maxLen < 35) cols = 2;
+                else if (items.length > 6) cols = 2;
             }
             container.style.setProperty('--cols', cols);
         }
@@ -2705,12 +2713,18 @@
                     });
                 });
 
+                const hasCol1Tasks = db.taskSections.some(s => s.col === 1);
+                const halfTasks = Math.ceil(db.taskSections.length / 2);
                 db.taskSections.forEach((sec, secIdx) => {
-                    const targetCol = colArr[sec.col !== undefined && sec.col < colArr.length ? sec.col : secIdx % 2];
+                    const targetCol = colArr[sec.col !== undefined && hasCol1Tasks && sec.col < colArr.length ? sec.col : (secIdx < halfTasks ? 0 : 1)];
                     const secId = sec.id, secTitle = sec.title, secColor = sec.color || '#ffffff';
 
-                    let secBlock = targetCol.querySelector(`.section-block[data-sec-id="${secId}"]`);
-                    if (!secBlock) {
+                    let secBlock = listC.querySelector(`.section-block[data-sec-id="${secId}"]`);
+                    if (secBlock) {
+                        if (secBlock.parentElement !== targetCol) {
+                            targetCol.appendChild(secBlock);
+                        }
+                    } else {
                         secBlock = document.createElement('div');
                         secBlock.className = 'section-block';
                         secBlock.setAttribute('data-sec-id', secId);
@@ -2788,8 +2802,10 @@
                     });
                 });
 
+                const hasCol1Dailies = db.dailySections.some(s => s.col === 1);
+                const halfDailies = Math.ceil(db.dailySections.length / 2);
                 db.dailySections.forEach((sec, secIdx) => {
-                    const targetCol = colArr[sec.col !== undefined && sec.col < colArr.length ? sec.col : secIdx % 2];
+                    const targetCol = colArr[sec.col !== undefined && hasCol1Dailies && sec.col < colArr.length ? sec.col : (secIdx < halfDailies ? 0 : 1)];
                     renderDailiesSection(targetCol, sec.title, sec.id, sec.color || '#ffffff', itemMap, secIdx === 0, orphaned);
                 });
                 updateScoreBar();
@@ -2842,38 +2858,39 @@
                     const closeBtn = sidebar.querySelector('.notes-close-btn');
                     const textarea = sidebar.querySelector('.notes-textarea');
 
-                    const updateState = () => {
-                        activeNotesState = sidebar.classList.contains('expanded') ? 'expanded' :
-                            (sidebar.classList.contains('collapsed-hidden') ? 'collapsed-hidden' : 'sidebar');
+                    const syncAllSidebars = (newState) => {
+                        activeNotesState = newState;
                         db.settings.notesState = activeNotesState;
                         db.settings.m = Date.now();
                         saveLocal(); pushToCloud();
+                        document.querySelectorAll('.notes-sidebar').forEach(sb => {
+                            sb.classList.remove('expanded', 'collapsed-hidden');
+                            if (newState === 'expanded') sb.classList.add('expanded');
+                            if (newState === 'collapsed-hidden') sb.classList.add('collapsed-hidden');
+                        });
                     };
 
                     expandBtn.onclick = (e) => {
                         e.stopPropagation();
-                        if (sidebar.classList.contains('collapsed-hidden')) {
-                            sidebar.classList.remove('collapsed-hidden');
+                        if (activeNotesState === 'collapsed-hidden') {
+                            syncAllSidebars('sidebar');
                         } else {
-                            sidebar.classList.add('expanded');
+                            syncAllSidebars('expanded');
                         }
-                        updateState();
                     };
                     collapseBtn.onclick = (e) => {
                         e.stopPropagation();
-                        if (sidebar.classList.contains('expanded')) {
-                            sidebar.classList.remove('expanded');
-                        } else if (sidebar.classList.contains('collapsed-hidden')) {
-                            sidebar.classList.remove('collapsed-hidden');
+                        if (activeNotesState === 'expanded') {
+                            syncAllSidebars('sidebar');
+                        } else if (activeNotesState === 'collapsed-hidden') {
+                            syncAllSidebars('sidebar');
                         } else {
-                            sidebar.classList.add('collapsed-hidden');
+                            syncAllSidebars('collapsed-hidden');
                         }
-                        updateState();
                     };
                     closeBtn.onclick = (e) => {
                         e.stopPropagation();
-                        sidebar.classList.remove('expanded');
-                        updateState();
+                        syncAllSidebars('sidebar');
                     };
 
                     textarea.addEventListener('input', () => handleNoteInput(textarea.innerHTML));
@@ -3009,8 +3026,13 @@
         }
 
         function renderDailiesSection(p, l, k, color, itemMap, isDefault, orphaned) {
-            let secBlock = p.querySelector(`.section-block[data-sec-id="${k}"]`);
-            if (!secBlock) {
+            const dailyC = document.getElementById('dailies-content');
+            let secBlock = dailyC.querySelector(`.section-block[data-sec-id="${k}"]`);
+            if (secBlock) {
+                if (secBlock.parentElement !== p) {
+                    p.appendChild(secBlock);
+                }
+            } else {
                 secBlock = document.createElement('div');
                 secBlock.className = 'section-block';
                 secBlock.setAttribute('data-sec-id', k);
@@ -3847,9 +3869,10 @@
             document.getElementById('shopping-pane').style.visibility = tabs.shopping ? '' : 'hidden';
             document.getElementById('notes-pane').style.visibility = tabs.notes ? '' : 'hidden';
 
-            // Desktop Sidebar
-            const notesWrapper = document.querySelector('.notes-wrapper');
-            if (notesWrapper) notesWrapper.style.display = tabs.notes ? '' : 'none';
+            // Desktop Sidebars (Tasks + Dailies)
+            document.querySelectorAll('.notes-wrapper').forEach(w => {
+                w.style.display = tabs.notes ? '' : 'none';
+            });
         }
         function getSyncHistory() {
             try {
