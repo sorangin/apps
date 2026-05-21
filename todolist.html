@@ -2333,14 +2333,7 @@
                 const div = document.createElement('div'); div.className = 'menu-divider'; m.appendChild(div);
                 addMenuOption(m, '+ New Category', false, () => {
                     closeFabMenu();
-                    showPrompt("New Category Name", "", (n) => {
-                        if (n && !db.shopCategories.some(x => x.title === n)) {
-                            const newCat = { id: 'cat_' + Date.now(), title: n, color: '#ffffff' };
-                            db.shopCategories.push(newCat);
-                            activeShopCat = newCat.id;
-                            pushToCloud(); render();
-                        }
-                    });
+                    openSectionCreate();
                 });
             } else if (tab === 'dailies') {
                 db.dailySections.forEach((s, idx) => {
@@ -2354,14 +2347,7 @@
                 const div = document.createElement('div'); div.className = 'menu-divider'; m.appendChild(div);
                 addMenuOption(m, '+ New Section', false, () => {
                     closeFabMenu();
-                    showPrompt("New Section Name", "", (n) => {
-                        if (n && !db.dailySections.some(x => x.title === n)) {
-                            const newSec = { id: 'sec_' + Date.now(), title: n, color: '#ffffff' };
-                            db.dailySections.push(newSec);
-                            activeDailySection = newSec.id;
-                            pushToCloud(); render();
-                        }
-                    });
+                    openSectionCreate();
                 });
             } else {
                 db.taskSections.forEach((s, idx) => {
@@ -2375,14 +2361,7 @@
                 const div = document.createElement('div'); div.className = 'menu-divider'; m.appendChild(div);
                 addMenuOption(m, '+ New Section', false, () => {
                     closeFabMenu();
-                    showPrompt("New Section Name", "", (n) => {
-                        if (n && !db.taskSections.some(x => x.title === n)) {
-                            const newSec = { id: 'sec_' + Date.now(), title: n, color: '#ffffff' };
-                            db.taskSections.push(newSec);
-                            activeTaskSection = newSec.id;
-                            pushToCloud(); render();
-                        }
-                    });
+                    openSectionCreate();
                 });
             }
 
@@ -3119,8 +3098,17 @@
 
                 // Right-click / long-press to edit points (dailies only)
                 if (isDailies) {
+                    const checkIsDaily = () => {
+                        const idx = db.dailies.findIndex(x => x.uid == card.getAttribute('data-uid'));
+                        if (idx < 0) return false;
+                        const item = db.dailies[idx];
+                        const sec = db.dailySections.find(s => s.id === item.section);
+                        return sec ? (sec.interval || 'daily') === 'daily' : true;
+                    };
+
                     card.oncontextmenu = (e) => {
                         e.preventDefault();
+                        if (!checkIsDaily()) return;
                         const idx = db.dailies.findIndex(x => x.uid == card.getAttribute('data-uid'));
                         if (idx < 0) return;
                         showPrompt('Point Value', String(db.dailies[idx].points || 1), (v) => {
@@ -3134,6 +3122,7 @@
                     };
                     let _lpTimer = null, _lpStartX = 0, _lpStartY = 0;
                     card.addEventListener('touchstart', (e) => {
+                        if (!checkIsDaily()) return;
                         _lpStartX = e.touches[0].clientX; _lpStartY = e.touches[0].clientY;
                         _lpTimer = setTimeout(() => {
                             _lpTimer = null;
@@ -3425,10 +3414,15 @@
                 if (item.done) item.doneAt = Date.now();
                 
                 if (tab === 'dailies' && e) {
-                    showPointsHUD(e.clientX, e.clientY, item.points || 1, item.done);
+                    const sec = db.dailySections.find(s => s.id === item.section);
+                    const isDaily = sec ? (sec.interval || 'daily') === 'daily' : true;
+                    if (isDaily && item.done) {
+                        showPointsHUD(e.clientX, e.clientY, item.points || 1, item.done);
+                    }
                 }
                 
                 render();
+                saveLocal();
                 pushToCloud(true);
             }
         }
@@ -4070,6 +4064,16 @@
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
 
+            // Set Title to "Edit Section" / "Edit Category"
+            const titleEl = modal.querySelector('h3');
+            if (titleEl) {
+                titleEl.textContent = tab === 'shopping' ? 'Edit Category' : 'Edit Section';
+            }
+
+            // Show Delete button
+            const deleteBtn = document.getElementById('delete-sec-btn');
+            if (deleteBtn) deleteBtn.style.display = '';
+
             const intervalCont = document.getElementById('edit-sec-interval-container');
             if (tab === 'dailies') {
                 intervalCont.classList.remove('hidden');
@@ -4089,6 +4093,96 @@
                 b.onclick = () => pickColor(b.dataset.color);
             });
             document.getElementById('edit-sec-color-input').onchange = (e) => pickColor(e.target.value);
+        }
+
+        function openSectionCreate() {
+            editingSectionId = null;
+            editingSectionColor = '#ffffff';
+
+            const nameInput = document.getElementById('edit-sec-name');
+            nameInput.value = '';
+            document.getElementById('edit-sec-color-input').value = editingSectionColor;
+
+            // Highlight default color
+            document.querySelectorAll('.color-btn').forEach(b => {
+                b.classList.toggle('selected', b.dataset.color === editingSectionColor);
+            });
+
+            const modal = document.getElementById('edit-sec-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+
+            // Set Title to "New Section" / "New Category"
+            const titleEl = modal.querySelector('h3');
+            if (titleEl) {
+                titleEl.textContent = tab === 'shopping' ? 'New Category' : 'New Section';
+            }
+
+            // Hide Delete button
+            const deleteBtn = document.getElementById('delete-sec-btn');
+            if (deleteBtn) deleteBtn.style.display = 'none';
+
+            const intervalCont = document.getElementById('edit-sec-interval-container');
+            if (tab === 'dailies') {
+                intervalCont.classList.remove('hidden');
+                document.getElementById('edit-sec-interval').value = 'daily';
+            } else {
+                intervalCont.classList.add('hidden');
+            }
+
+            // Setup button handlers
+            document.getElementById('save-sec-btn').onclick = saveNewSection;
+            document.getElementById('cancel-sec-btn').onclick = closeEditModal;
+
+            nameInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); saveNewSection(); } };
+
+            document.querySelectorAll('.color-btn').forEach(b => {
+                b.onclick = () => pickColor(b.dataset.color);
+            });
+            document.getElementById('edit-sec-color-input').onchange = (e) => pickColor(e.target.value);
+
+            setTimeout(() => nameInput.focus(), 100);
+        }
+
+        function saveNewSection() {
+            const nameInput = document.getElementById('edit-sec-name');
+            const n = nameInput.value.trim();
+            if (!n) {
+                closeEditModal();
+                return;
+            }
+
+            if (tab === 'shopping') {
+                if (!db.shopCategories.some(x => x.title.toLowerCase() === n.toLowerCase())) {
+                    const newCat = { id: 'cat_' + Date.now(), title: n, color: editingSectionColor };
+                    db.shopCategories.push(newCat);
+                    activeShopCat = newCat.id;
+                    db.settings.activeShopCat = newCat.id;
+                    db.settings.m = Date.now();
+                    saveLocal(); pushToCloud(); render();
+                }
+            } else if (tab === 'dailies') {
+                if (!db.dailySections.some(x => x.title.toLowerCase() === n.toLowerCase())) {
+                    const interval = document.getElementById('edit-sec-interval').value;
+                    const newSec = { id: 'sec_' + Date.now(), title: n, color: editingSectionColor, interval: interval };
+                    db.dailySections.push(newSec);
+                    activeDailySection = newSec.id;
+                    db.settings.activeDailySection = newSec.id;
+                    db.settings.m = Date.now();
+                    saveLocal(); pushToCloud(); render();
+                }
+            } else {
+                if (!db.taskSections.some(x => x.title.toLowerCase() === n.toLowerCase())) {
+                    const newSec = { id: 'sec_' + Date.now(), title: n, color: editingSectionColor };
+                    db.taskSections.push(newSec);
+                    activeTaskSection = newSec.id;
+                    db.settings.activeTaskSection = newSec.id;
+                    db.settings.m = Date.now();
+                    saveLocal(); pushToCloud(); render();
+                }
+            }
+
+            closeEditModal();
         }
 
         function pickColor(color) {
