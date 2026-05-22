@@ -1236,6 +1236,208 @@
             20% { transform: translateY(-10px); opacity: 1; scale: 1.2; }
             100% { transform: translateY(-40px); opacity: 0; scale: 1; }
         }
+
+        /* Victory Modal Overlay */
+        .victory-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(8, 8, 9, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            opacity: 0;
+            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+        .victory-modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Victory Modal Content Box */
+        .victory-modal-content {
+            background: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            width: 90%;
+            max-width: 400px;
+            padding: 36px 24px;
+            text-align: center;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .victory-modal-overlay.active .victory-modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        /* Glassmorphism Background Glows */
+        .victory-modal-content::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(74, 222, 128, 0.1) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Trophy animation */
+        .victory-trophy-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+        .victory-trophy-glow {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(34, 197, 94, 0.35) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: victoryPulseGlow 2s infinite ease-in-out;
+        }
+        .victory-trophy-icon {
+            font-size: 52px;
+            filter: drop-shadow(0 4px 12px rgba(34, 197, 94, 0.4));
+            animation: victoryBounceEmoji 2.4s infinite ease-in-out;
+            transform-origin: center bottom;
+        }
+
+        @keyframes victoryPulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.3); opacity: 0.9; }
+        }
+        @keyframes victoryBounceEmoji {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(6deg); }
+        }
+
+        /* Title & Typography */
+        .victory-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0 0 8px;
+            background: linear-gradient(135deg, #4ade80, #22c55e, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            z-index: 1;
+            position: relative;
+        }
+        .victory-subtitle {
+            font-size: 14px;
+            color: rgba(229, 231, 235, 0.7);
+            margin: 0 0 24px;
+            line-height: 1.5;
+            z-index: 1;
+            position: relative;
+        }
+
+        /* Stats */
+        .victory-stats {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 24px;
+            z-index: 1;
+            position: relative;
+        }
+        .victory-stat-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 12px 20px;
+            flex: 1;
+            max-width: 140px;
+        }
+        .victory-stat-val {
+            display: block;
+            font-size: 22px;
+            font-weight: 700;
+            color: #4ade80;
+            margin-bottom: 2px;
+        }
+        .victory-stat-lbl {
+            font-size: 10px;
+            color: rgba(229, 231, 235, 0.5);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* Quote */
+        .victory-quote {
+            font-size: 13px;
+            font-style: italic;
+            color: rgba(229, 231, 235, 0.45);
+            margin: 0 0 28px;
+            line-height: 1.6;
+            z-index: 1;
+            position: relative;
+        }
+
+        /* Victory Button */
+        .victory-btn {
+            position: relative;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            border: none;
+            outline: none;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 14px 36px;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            overflow: hidden;
+            z-index: 1;
+        }
+        .victory-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .victory-btn:active {
+            transform: translateY(1px);
+        }
+        .victory-btn-glow {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            transition: left 0.6s ease;
+        }
+        .victory-btn:hover .victory-btn-glow {
+            left: 100%;
+        }
+
+        /* Confetti Canvas */
+        .victory-confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -1529,6 +1731,38 @@
             </div>
         </div>
     </div>
+
+    <!-- Victory Modal Overlay -->
+    <div id="victory-modal" class="victory-modal-overlay">
+        <canvas id="victory-confetti-canvas" class="victory-confetti-canvas"></canvas>
+        <div class="victory-modal-content">
+            <div class="victory-trophy-container">
+                <div class="victory-trophy-glow"></div>
+                <div class="victory-trophy-icon">🎉</div>
+            </div>
+            <h2 class="victory-title">Excellent Job!</h2>
+            <p class="victory-subtitle">You've crushed 100% of your dailies today!</p>
+            
+            <div class="victory-stats">
+                <div class="victory-stat-item">
+                    <span class="victory-stat-val" id="victory-count">0</span>
+                    <span class="victory-stat-lbl">Completed</span>
+                </div>
+                <div class="victory-stat-item">
+                    <span class="victory-stat-val" id="victory-pts">0</span>
+                    <span class="victory-stat-lbl">Total Pts</span>
+                </div>
+            </div>
+            
+            <p class="victory-quote" id="victory-quote">"The secret of your future is hidden in your daily routine."</p>
+            
+            <button class="victory-btn" onclick="closeVictoryModal()">
+                <span>Awesome!</span>
+                <div class="victory-btn-glow"></div>
+            </button>
+        </div>
+    </div>
+
     <style>
         #tab-nav:empty {
             display: none;
@@ -3427,10 +3661,19 @@
             setTimeout(() => el.remove(), 1000);
         }
 
-        // REVERT: Render with animation enabled (default)
         function toggle(idx, e) {
             if (idx > -1) {
                 const item = db[tab][idx];
+                
+                let beforePct = 0;
+                if (tab === 'dailies') {
+                    try {
+                        beforePct = calculateDailyScore().pct;
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+                
                 item.done = !item.done;
                 item.m = Date.now();
                 if (item.done) item.doneAt = Date.now();
@@ -3444,6 +3687,18 @@
                 }
                 
                 render();
+                
+                if (tab === 'dailies') {
+                    try {
+                        const afterPct = calculateDailyScore().pct;
+                        if (beforePct < 100 && afterPct === 100) {
+                            triggerVictoryCelebration();
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+                
                 saveLocal();
                 pushToCloud(true);
             }
@@ -4444,6 +4699,218 @@
             s.className = (ok ? (pendingSync ? 'status-syncing' : 'status-online') : 'status-offline') + ' transition-all duration-300';
             s.title = ok ? (pendingSync ? 'Syncing...' : 'Online') : 'Offline';
         }
+
+        const VICTORY_QUOTES = [
+            "\"The secret of your future is hidden in your daily routine.\"",
+            "\"Success is the sum of small efforts, repeated day in and day out.\"",
+            "\"Consistency is the compound interest of self-improvement.\"",
+            "\"Well begun is half done. Today, you completed it all!\"",
+            "\"You are what you repeatedly do. Excellence, then, is not an act, but a habit.\"",
+            "\"Small daily improvements over time lead to stunning results.\""
+        ];
+
+        function playVictorySound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = audioCtx.currentTime;
+                
+                // Arpeggiated C major chord: C5 -> E5 -> G5 -> C6
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    
+                    gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.5);
+                    
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.55);
+                });
+            } catch (err) {
+                console.warn("Audio context not allowed or supported", err);
+            }
+        }
+
+        class ConfettiEngine {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.active = false;
+                this.colors = ['#4ade80', '#60a5fa', '#a78bfa', '#fbbf24', '#f97316', '#f472b6', '#22d3ee'];
+                this.resize = this.resize.bind(this);
+                this.loop = this.loop.bind(this);
+                window.addEventListener('resize', this.resize);
+                this.resize();
+            }
+            
+            resize() {
+                if (this.canvas) {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                }
+            }
+            
+            start() {
+                this.particles = [];
+                this.active = true;
+                this.resize();
+                
+                // Spawn standard particles from bottom-left and bottom-right
+                this.burst(0, this.canvas.height, 45, 80);
+                this.burst(this.canvas.width, this.canvas.height, 135, 80);
+                
+                // Spawn smaller burst in the center
+                this.burst(this.canvas.width / 2, this.canvas.height * 0.6, 270, 40);
+                
+                requestAnimationFrame(this.loop);
+            }
+            
+            stop() {
+                this.active = false;
+                if (this.ctx && this.canvas) {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+                this.particles = [];
+            }
+            
+            burst(x, y, angleDeg, count) {
+                for (let i = 0; i < count; i++) {
+                    const angle = (angleDeg + (Math.random() - 0.5) * 40) * Math.PI / 180;
+                    const speed = 8 + Math.random() * 22;
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: -Math.sin(angle) * speed,
+                        color: this.colors[Math.floor(Math.random() * this.colors.length)],
+                        size: 6 + Math.random() * 8,
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() - 0.5) * 0.15,
+                        opacity: 1,
+                        shape: Math.random() > 0.65 ? 'circle' : (Math.random() > 0.5 ? 'triangle' : 'rect'),
+                        gravity: 0.25 + Math.random() * 0.25,
+                        drag: 0.96 + Math.random() * 0.02
+                    });
+                }
+            }
+            
+            loop() {
+                if (!this.active) return;
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.vx *= p.drag;
+                    p.vy *= p.drag;
+                    p.vy += p.gravity;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.rotation += p.rotationSpeed;
+                    
+                    if (p.y > this.canvas.height - 40) {
+                        p.opacity -= 0.025;
+                    }
+                    
+                    if (p.opacity <= 0 || p.x < -60 || p.x > this.canvas.width + 60 || p.y > this.canvas.height + 60) {
+                        this.particles.splice(i, 1);
+                        continue;
+                    }
+                    
+                    this.ctx.save();
+                    this.ctx.translate(p.x, p.y);
+                    this.ctx.rotate(p.rotation);
+                    this.ctx.globalAlpha = p.opacity;
+                    this.ctx.fillStyle = p.color;
+                    
+                    const s = p.size;
+                    if (p.shape === 'rect') {
+                        this.ctx.fillRect(-s/2, -s/2, s, s * 0.6);
+                    } else if (p.shape === 'circle') {
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, s/2, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    } else if (p.shape === 'triangle') {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, -s/2);
+                        this.ctx.lineTo(s/2, s/2);
+                        this.ctx.lineTo(-s/2, s/2);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                    }
+                    
+                    this.ctx.restore();
+                }
+                
+                if (this.particles.length > 0) {
+                    requestAnimationFrame(this.loop);
+                } else {
+                    this.active = false;
+                }
+            }
+        }
+
+        let confettiEngineInstance = null;
+
+        function triggerVictoryCelebration() {
+            const modal = document.getElementById('victory-modal');
+            if (!modal) return;
+            
+            // Ensure click listener is bound for backdrop closing
+            if (!modal.dataset.listenerBound) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeVictoryModal();
+                });
+                modal.dataset.listenerBound = "true";
+            }
+            
+            try {
+                const { earned, total } = calculateDailyScore();
+                const dailySectionIds = new Set();
+                db.dailySections.forEach(s => {
+                    if ((s.interval || 'daily') === 'daily') dailySectionIds.add(s.id);
+                });
+                const count = db.dailies.filter(item => dailySectionIds.has(item.section) && item.done).length;
+                
+                const countEl = document.getElementById('victory-count');
+                const ptsEl = document.getElementById('victory-pts');
+                if (countEl) countEl.textContent = count;
+                if (ptsEl) ptsEl.textContent = earned;
+                
+                const quoteEl = document.getElementById('victory-quote');
+                if (quoteEl) {
+                    quoteEl.textContent = VICTORY_QUOTES[Math.floor(Math.random() * VICTORY_QUOTES.length)];
+                }
+            } catch (err) {
+                console.error(err);
+            }
+            
+            modal.classList.add('active');
+            playVictorySound();
+            
+            if (!confettiEngineInstance) {
+                confettiEngineInstance = new ConfettiEngine('victory-confetti-canvas');
+            }
+            if (confettiEngineInstance) {
+                confettiEngineInstance.start();
+            }
+        }
+
+        function closeVictoryModal() {
+            const modal = document.getElementById('victory-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+            if (confettiEngineInstance) {
+                confettiEngineInstance.stop();
+            }
+        }
+
         init();
     </script>
 </body>
