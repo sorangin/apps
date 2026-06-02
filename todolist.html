@@ -2404,6 +2404,7 @@
                 // Perform smart merge
                 const { merged, changed } = mergeDB(db, data.content);
                 db = merged;
+                checkDailiesReset();
 
                 if (changed) {
                     saveLocal();
@@ -2440,6 +2441,7 @@
                     // Crucial: Use the UP-TO-DATE db from memory for the merge, not a stale copy
                     const { merged, changed } = mergeDB(db, data?.content);
                     db = merged;
+                    checkDailiesReset();
                     if (changed) {
                         saveLocal();
                         render(false);
@@ -2488,6 +2490,7 @@
                 const remoteDB = payload.new.content;
                 const { merged, changed } = mergeDB(db, remoteDB); 
                 db = merged;
+                checkDailiesReset();
                 saveLocal(); // Persist remote update immediately
                 renderTabOrder();
                 updateTabVisibility();
