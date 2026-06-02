@@ -1152,12 +1152,55 @@
 
         .score-marker {
             position: absolute;
-            top: 0;
-            width: 2px;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.15);
+            top: -6px;
+            width: 16px;
+            height: calc(100% + 12px);
             z-index: 10;
+            cursor: default;
+            transform: translateX(-7px);
+        }
+        .score-marker::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 6px;
+            width: 2px;
+            height: calc(100% - 12px);
+            background: rgba(255, 255, 255, 0.15);
             pointer-events: none;
+        }
+        .score-marker-label {
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            background: #1e1e20;
+            color: #e5e7eb;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s, transform 0.15s;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .score-marker-label::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-top-color: #1e1e20;
+        }
+        .score-marker:hover .score-marker-label {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
 
         .score-details {
@@ -2023,7 +2066,7 @@
                 activeShopCat: 'misc',
                 activeDailySection: 'Daily',
                 notesState: 'sidebar',
-                m: Date.now()
+                m: 0
             },
             notes: "",
             notesM: 0
@@ -2215,7 +2258,7 @@
                     lastDailyReset: todayStr,
                     lastWeeklyReset: currentWeek,
                     lastMonthlyReset: currentMonth,
-                    m: Date.now()
+                    m: 0
                 };
             }
             if (!data.settings.tabs) data.settings.tabs = { tasks: true, shopping: true, dailies: true, notes: true };
@@ -2232,8 +2275,8 @@
             if (data.settings.activeDailySection === undefined) data.settings.activeDailySection = 'Daily';
             if (data.settings.notesState === undefined) data.settings.notesState = 'sidebar';
             if (data.settings.lastDailyReset === undefined) data.settings.lastDailyReset = todayStr;
-            if (data.settings.lastWeeklyReset === undefined) { data.settings.lastWeeklyReset = currentWeek; data.settings.m = Date.now(); }
-            if (data.settings.lastMonthlyReset === undefined) { data.settings.lastMonthlyReset = currentMonth; data.settings.m = Date.now(); }
+            if (data.settings.lastWeeklyReset === undefined) { data.settings.lastWeeklyReset = currentWeek; }
+            if (data.settings.lastMonthlyReset === undefined) { data.settings.lastMonthlyReset = currentMonth; }
             if (data.settings.m === undefined) data.settings.m = 0;
 
             // Deleted tombstones
@@ -2822,6 +2865,10 @@
                 return;
             }
 
+            const exc = Math.ceil(total * 0.85);
+            const sol = Math.ceil(total * 0.60);
+            const mai = Math.ceil(total * 0.40);
+
             bar.style.display = '';
             const rating = getDailyRating(pct);
 
@@ -2840,10 +2887,6 @@
             }
 
             if (tooltip) {
-                const exc = Math.ceil(total * 0.85);
-                const sol = Math.ceil(total * 0.60);
-                const mai = Math.ceil(total * 0.40);
-                
                 tooltip.innerHTML = `
                     <div class="text-[10px] uppercase font-black opacity-40 mb-2 tracking-widest text-center">Scoreboard</div>
                     <div class="tooltip-row" style="color:#4ade80">
@@ -2878,6 +2921,14 @@
 
             const track = bar.querySelector('.score-track');
             if (track) track.classList.toggle('perfect', pct === 100);
+
+            // Update marker labels with point thresholds
+            const markers = bar.querySelectorAll('.score-marker-label');
+            if (markers.length === 3) {
+                markers[0].textContent = `Maintenance — ${mai} pts`;
+                markers[1].textContent = `Solid — ${sol} pts`;
+                markers[2].textContent = `Excellent — ${exc} pts`;
+            }
 
             const fill = document.getElementById('score-fill');
             fill.style.width = pct + '%';
@@ -3018,9 +3069,9 @@
                         </div>
                         <div class="score-track">
                             <div id="score-fill" class="score-fill" style="width:0%"></div>
-                            <div class="score-marker" style="left:40%" title="Maintenance (40%)"></div>
-                            <div class="score-marker" style="left:60%" title="Solid (60%)"></div>
-                            <div class="score-marker" style="left:85%" title="Excellent (85%)"></div>
+                            <div class="score-marker" style="left:40%"><span class="score-marker-label" style="color:#fbbf24">Maintenance — 40%</span></div>
+                            <div class="score-marker" style="left:60%"><span class="score-marker-label" style="color:#60a5fa">Solid — 60%</span></div>
+                            <div class="score-marker" style="left:85%"><span class="score-marker-label" style="color:#4ade80">Excellent — 85%</span></div>
                         </div>
                         <div class="score-details">
                             <span id="score-points" class="score-points">0<span> / 0</span></span>
