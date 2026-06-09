@@ -51,12 +51,15 @@
         .recorder-container {
             width: 100%;
             max-width: 400px;
+            height: 680px;
             background: var(--card-bg);
             padding: 2rem;
             border-radius: 24px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
             border: 1px solid var(--border);
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
         /* Mobile Optimization */
@@ -69,11 +72,14 @@
             .recorder-container {
                 max-width: 100%;
                 width: 100%;
-                min-height: 100vh;
+                height: 100vh;
                 border-radius: 0;
                 border: none;
                 box-shadow: none;
                 padding: 1.5rem;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
             }
 
             /* Make FAB higher on mobile */
@@ -204,8 +210,7 @@
 
         /* Recordings List */
         .recordings-list {
-            max-height: 50vh;
-            /* Dynamic height */
+            flex-grow: 1;
             overflow-y: auto;
             border-top: 1px solid var(--border);
             padding-top: 1rem;
@@ -1042,6 +1047,22 @@
                     saveSettings();
                 });
             });
+
+            // Deselect all items when clicking outside
+            document.addEventListener('click', (e) => {
+                const selectedCount = document.querySelectorAll('.recording-item.selected').length;
+                if (selectedCount === 0) return;
+
+                const path = e.composedPath();
+                const isInsideRecording = path.some(el => el.classList && el.classList.contains('recording-item'));
+                const isInsideBulkActions = path.some(el => el.id === 'bulkActions');
+                const isInsideModal = path.some(el => el.classList && el.classList.contains('modal-overlay'));
+                const isInsideSettingsBtn = path.some(el => el.id === 'settingsBtn');
+
+                if (!isInsideRecording && !isInsideBulkActions && !isInsideModal && !isInsideSettingsBtn) {
+                    clearSelection();
+                }
+            });
         });
 
         // Initialize DB and load recordings
@@ -1074,11 +1095,15 @@
                         
                         globalStream = new MediaStream(audioTracks);
                     } else {
-                        const constraints = {
-                            audio: appSettings.deviceId && appSettings.deviceId !== 'default' 
-                                ? { deviceId: { exact: appSettings.deviceId } }
-                                : true
+                        const audioConstraints = {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false
                         };
+                        if (appSettings.deviceId && appSettings.deviceId !== 'default') {
+                            audioConstraints.deviceId = { exact: appSettings.deviceId };
+                        }
+                        const constraints = { audio: audioConstraints };
                         globalStream = await navigator.mediaDevices.getUserMedia(constraints);
                     }
                     setupVisualizer(globalStream);
@@ -1153,6 +1178,10 @@
             // Show visualizer and timer
             document.querySelector('.visualizer-container').style.display = 'flex';
             document.getElementById('timer').style.display = 'block';
+
+            // Resize canvas to match layout size
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
 
             recordBtn.classList.add('recording');
             recordBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
@@ -1267,7 +1296,7 @@
             recordingItem.onclick = (e) => toggleSelection(e, rec.id);
 
             recordingItem.innerHTML = `
-                <div class="recording-header">
+                <div class="recording-header" onclick="toggleExpand(event, '${rec.id}')">
                     <span class="timestamp">${rec.displayTime}</span>
                     <div class="header-actions">
                           <button class="icon-btn edit-btn" id="edit-btn-${rec.id}" onclick="toggleEditMode(event, '${rec.id}')" title="Trim Audio" style="font-size: 16px; line-height: 1;">
@@ -1401,6 +1430,24 @@
             } catch (err) {
                 console.error("Audio decoding failed:", err);
                 return null;
+            }
+        }
+
+        function toggleExpand(e, id) {
+            e.stopPropagation();
+            if (e.target.closest('.header-actions')) return;
+
+            const el = document.querySelector(`.recording-item[data-id="${id}"]`);
+            if (!el) return;
+            const isExpanded = el.classList.contains('expanded');
+            if (isExpanded) {
+                el.classList.remove('expanded');
+                const rec = getRecording(id);
+                if (rec && rec.isEditing) {
+                    exitEditMode(id);
+                }
+            } else {
+                expandItem(id);
             }
         }
 
@@ -1820,7 +1867,10 @@
             
             // Adjust canvas resolution dynamically
             const displayWidth = canvas.clientWidth || 300;
-            const displayHeight = canvas.clientHeight || 90;
+            let displayHeight = canvas.clientHeight || 90;
+            if (displayHeight < 30) {
+                displayHeight = 90;
+            }
             
             if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
                 canvas.width = displayWidth * dpr;
