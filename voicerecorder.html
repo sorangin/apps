@@ -82,10 +82,20 @@
                 right: 20px;
             }
 
+            #recordBtn.bulk-visible {
+                bottom: 160px;
+            }
+
             /* Bulk actions higher on mobile */
             .bulk-actions {
                 bottom: 80px !important;
                 width: 90%;
+                justify-content: space-around;
+                transform: translateX(-50%) translateY(200px);
+            }
+
+            .bulk-actions.visible {
+                transform: translateX(-50%) translateY(0);
             }
         }
 
@@ -155,6 +165,7 @@
             color: white;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             z-index: 100;
+            transition: transform 0.2s ease, background 0.2s ease, bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         #recordBtn:hover {
@@ -651,6 +662,18 @@
             <div class="modal-actions">
                 <button class="modal-btn cancel" onclick="closeDeleteModal()">Cancel</button>
                 <button class="modal-btn delete" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Discard Modal -->
+    <div class="modal-overlay" id="confirmDiscardModal">
+        <div class="modal-content">
+            <div class="modal-title">Discard Changes?</div>
+            <div class="modal-text">You have unsaved trim changes. Are you sure you want to discard them?</div>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" onclick="closeConfirmDiscardModal()">Cancel</button>
+                <button class="modal-btn delete" style="background: var(--danger); color: white;" onclick="handleConfirmDiscard()">Discard</button>
             </div>
         </div>
     </div>
@@ -1524,9 +1547,9 @@
             if (rec.isEditing) {
                 const history = getTrimHistory(id);
                 if (history.undoStack.length > 0) {
-                    if (confirm("You have unsaved changes. Discard them?")) {
+                    openConfirmDiscardModal(() => {
                         discardTrimChanges(e, id);
-                    }
+                    });
                 } else {
                     exitEditMode(id);
                 }
@@ -2010,10 +2033,14 @@
 
             if (selectedCount > 0) {
                 bulkActions.classList.add('visible');
+                recordBtn.classList.add('bulk-visible');
                 const btnContent = selectAllBtn.querySelector('svg').outerHTML + (selectedCount === allCount ? ' Deselect All' : ' Select All');
                 selectAllBtn.innerHTML = btnContent;
             } else {
                 bulkActions.classList.remove('visible');
+                recordBtn.classList.remove('bulk-visible');
+                const btnContent = selectAllBtn.querySelector('svg').outerHTML + ' Select All';
+                selectAllBtn.innerHTML = btnContent;
             }
         }
 
@@ -2101,6 +2128,23 @@
                 clearSelection();
             }
             closeDeleteModal();
+        }
+
+        let discardConfirmCallback = null;
+
+        function openConfirmDiscardModal(onConfirm) {
+            discardConfirmCallback = onConfirm;
+            document.getElementById('confirmDiscardModal').classList.add('active');
+        }
+
+        function closeConfirmDiscardModal() {
+            document.getElementById('confirmDiscardModal').classList.remove('active');
+            discardConfirmCallback = null;
+        }
+
+        function handleConfirmDiscard() {
+            if (discardConfirmCallback) discardConfirmCallback();
+            closeConfirmDiscardModal();
         }
 
         function deleteRecording(e, id) {
