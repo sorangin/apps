@@ -117,7 +117,7 @@
             background: rgba(0, 0, 0, 0.2);
             border-radius: 16px;
             margin-bottom: 1.5rem;
-            display: flex;
+            display: none; /* Hidden on load */
             align-items: center;
             justify-content: center;
             overflow: hidden;
@@ -136,6 +136,7 @@
             margin-bottom: 1.5rem;
             font-weight: 700;
             color: var(--primary-color);
+            display: none; /* Hidden on load */
         }
 
         /* Controls */
@@ -342,13 +343,19 @@
             align-items: center;
             gap: 1.0rem;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s, visibility 0.3s;
             z-index: 200;
             white-space: nowrap;
+            visibility: hidden;
+            pointer-events: none;
+            opacity: 0;
         }
 
         .bulk-actions.visible {
             transform: translateX(-50%) translateY(0);
+            visibility: visible;
+            pointer-events: auto;
+            opacity: 1;
         }
 
         .bulk-btn {
@@ -1143,6 +1150,10 @@
 
             mediaRecorder.start();
 
+            // Show visualizer and timer
+            document.querySelector('.visualizer-container').style.display = 'flex';
+            document.getElementById('timer').style.display = 'block';
+
             recordBtn.classList.add('recording');
             recordBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
             statusText.innerText = "Recording...";
@@ -1158,6 +1169,10 @@
             recordBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
             statusText.innerText = "Processing audio...";
             clearInterval(timerInterval);
+
+            // Hide visualizer and timer
+            document.querySelector('.visualizer-container').style.display = 'none';
+            document.getElementById('timer').style.display = 'none';
         }
 
         async function saveRecording() {
