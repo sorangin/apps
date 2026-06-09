@@ -12,6 +12,8 @@
     <link rel="icon" type="image/svg+xml" href="">
 
     <title>Voice Recorder</title>
+    <!-- lamejs for MP3 Encoding -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <style>
         :root {
             --bg-color: #0f1014;
@@ -379,15 +381,217 @@
             background: var(--border);
             border-radius: 10px;
         }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 320px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .modal-text {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.96);
+        }
+
+        .modal-btn.cancel {
+            background: var(--track-bg);
+            color: var(--text-main);
+        }
+
+        .modal-btn.delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.1);
+            /* Subtle border */
+        }
+
+        /* Interactive Waveform Visualizer & Edit Styles */
+        .recording-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .waveform-wrapper {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .recording-item.expanded .waveform-wrapper {
+            display: flex;
+        }
+
+        .recording-item.expanded .custom-player .progress-container {
+            visibility: hidden;
+            width: 0;
+            flex-grow: 0;
+            padding: 0;
+            margin: 0;
+        }
+
+        .waveform-container {
+            position: relative;
+            width: 100%;
+            height: 90px;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: ew-resize;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .waveform-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Edit Actions inside expanded waveform wrapper */
+        .waveform-edit-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .edit-info-text {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .edit-info-text strong {
+            color: var(--primary-color);
+        }
+
+        .waveform-edit-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .edit-action-btn {
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .edit-action-btn svg {
+            flex-shrink: 0;
+        }
+
+        .edit-action-btn.cancel {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .edit-action-btn.cancel:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .edit-action-btn.cut {
+            background: var(--danger);
+            color: white;
+        }
+
+        .edit-action-btn.cut:hover {
+            background: #dc2626;
+        }
+
+        /* Scissor Edit Mode styling */
+        .icon-btn.edit-active {
+            color: var(--primary-color);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 
 <body>
 
     <div class="recorder-container">
-        <div class="header">
-            <!-- Title removed -->
-            <p id="status">Ready to capture</p>
+        <div class="header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <p id="status" style="margin: 0;">Ready to capture</p>
+            <button class="icon-btn" id="settingsBtn" title="Settings" onclick="openSettingsModal()" style="padding: 6px; border-radius: 50%; width: 36px; height: 36px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;">
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor;"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            </button>
         </div>
 
         <div class="visualizer-container">
@@ -437,6 +641,80 @@
             </svg>
             Delete
         </button>
+    </div>
+
+    <!-- Custom Delete Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-title">Delete Recording?</div>
+            <div class="modal-text" id="modalText">This action cannot be undone.</div>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button class="modal-btn delete" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content" style="max-width: 350px; text-align: left; padding: 20px;">
+            <div class="modal-title" style="text-align: center; margin-bottom: 20px; font-size: 1.25rem;">Settings</div>
+            
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+                <!-- Audio Format -->
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 500;">Recording Format</label>
+                    <select id="settingFormat" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--track-bg); border: 1px solid var(--border); color: var(--text-main); font-size: 0.9rem; outline: none; cursor: pointer;">
+                        <option value="wav">WAV (Lossless PCM)</option>
+                        <option value="mp3">MP3 (Compressed)</option>
+                    </select>
+                </div>
+
+                <!-- MP3 Bitrate -->
+                <div id="settingBitrateContainer" style="display: none;">
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 500;">MP3 Bitrate (Quality)</label>
+                    <select id="settingBitrate" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--track-bg); border: 1px solid var(--border); color: var(--text-main); font-size: 0.9rem; outline: none; cursor: pointer;">
+                        <option value="96">96 kbps (Voice / Low space)</option>
+                        <option value="128">128 kbps (Standard)</option>
+                        <option value="192">192 kbps (High Quality)</option>
+                        <option value="320">320 kbps (Extreme Quality)</option>
+                    </select>
+                </div>
+
+                <!-- Audio Channel Mode -->
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 500;">Channel Mode</label>
+                    <select id="settingChannels" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--track-bg); border: 1px solid var(--border); color: var(--text-main); font-size: 0.9rem; outline: none; cursor: pointer;">
+                        <option value="1">Mono (Voice Optimized)</option>
+                        <option value="2">Stereo</option>
+                    </select>
+                </div>
+
+                <!-- Accent Color Picker -->
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 500;">Accent Theme Color</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span class="theme-dot" data-color="#0ea800" data-hover="#03730c" style="background: #0ea800; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; box-sizing: border-box; transition: transform 0.2s;"></span>
+                        <span class="theme-dot" data-color="#3b82f6" data-hover="#1d4ed8" style="background: #3b82f6; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; box-sizing: border-box; transition: transform 0.2s;"></span>
+                        <span class="theme-dot" data-color="#a855f7" data-hover="#7e22ce" style="background: #a855f7; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; box-sizing: border-box; transition: transform 0.2s;"></span>
+                        <span class="theme-dot" data-color="#f59e0b" data-hover="#b45309" style="background: #f59e0b; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; box-sizing: border-box; transition: transform 0.2s;"></span>
+                        <span class="theme-dot" data-color="#ef4444" data-hover="#b91c1c" style="background: #ef4444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; box-sizing: border-box; transition: transform 0.2s;"></span>
+                    </div>
+                </div>
+
+                <!-- Mic Selection -->
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 500;">Microphone Input</label>
+                    <select id="settingSource" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--track-bg); border: 1px solid var(--border); color: var(--text-main); font-size: 0.9rem; outline: none; cursor: pointer; max-width: 100%;">
+                        <option value="default">Default System Microphone</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 16px;">
+                <button class="modal-btn cancel" onclick="closeSettingsModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -567,7 +845,7 @@
                     savedRecordings.forEach(recData => {
                         const audioUrl = URL.createObjectURL(recData.blob);
                         const audioObj = new Audio(audioUrl);
-                        const fullRecording = { ...recData, url: audioUrl, audio: audioObj };
+                        const fullRecording = { ...recData, url: audioUrl, audio: audioObj, isEditing: false, selection: null };
 
                         recordings.push(fullRecording);
                         renderRecordingItem(fullRecording);
@@ -585,7 +863,158 @@
             });
         }
 
-        // Initialize App
+        // --- Settings Management ---
+        const appSettings = JSON.parse(localStorage.getItem('voiceRecorderSettings')) || {
+            format: 'wav',
+            bitrate: '128',
+            channels: '1',
+            themeColor: '#0ea800',
+            themeHover: '#03730c',
+            deviceId: 'default'
+        };
+
+        // Apply theme immediately on startup
+        applyTheme(appSettings.themeColor, appSettings.themeHover);
+
+        function applyTheme(color, hover) {
+            document.documentElement.style.setProperty('--primary-color', color);
+            document.documentElement.style.setProperty('--primary-hover', hover);
+            const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+            if (themeColorMeta) themeColorMeta.setAttribute('content', color);
+            
+            // Re-render expanded waveforms
+            if (typeof recordings !== 'undefined') {
+                recordings.forEach(rec => {
+                    const itemEl = document.querySelector(`.recording-item[data-id="${rec.id}"]`);
+                    if (itemEl && itemEl.classList.contains('expanded')) {
+                        drawWaveform(rec.id);
+                    }
+                });
+            }
+            
+            // Update selected theme dot styling
+            document.querySelectorAll('.theme-dot').forEach(dot => {
+                if (dot.dataset.color === color) {
+                    dot.style.borderColor = '#ffffff';
+                    dot.style.transform = 'scale(1.1)';
+                } else {
+                    dot.style.borderColor = 'transparent';
+                    dot.style.transform = 'scale(1)';
+                }
+            });
+        }
+
+        // Settings Modal Actions
+        async function openSettingsModal() {
+            await populateDevices();
+            
+            document.getElementById('settingFormat').value = appSettings.format;
+            document.getElementById('settingBitrate').value = appSettings.bitrate;
+            document.getElementById('settingChannels').value = appSettings.channels;
+            document.getElementById('settingSource').value = appSettings.deviceId || 'default';
+            
+            toggleBitrateVisibility();
+            
+            document.querySelectorAll('.theme-dot').forEach(dot => {
+                if (dot.dataset.color === appSettings.themeColor) {
+                    dot.style.borderColor = '#ffffff';
+                    dot.style.transform = 'scale(1.1)';
+                } else {
+                    dot.style.borderColor = 'transparent';
+                    dot.style.transform = 'scale(1)';
+                }
+            });
+
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function toggleBitrateVisibility() {
+            const format = document.getElementById('settingFormat').value;
+            const container = document.getElementById('settingBitrateContainer');
+            if (container) {
+                container.style.display = format === 'mp3' ? 'block' : 'none';
+            }
+        }
+
+        async function populateDevices() {
+            const sourceSelect = document.getElementById('settingSource');
+            if (!sourceSelect) return;
+            try {
+                // Pre-trigger request to unlock labels if permissions exist
+                if (!globalStream && appSettings.deviceId !== 'system') {
+                    try {
+                        const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        tempStream.getTracks().forEach(track => track.stop());
+                    } catch (e) {}
+                }
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioDevices = devices.filter(d => d.kind === 'audioinput');
+                
+                sourceSelect.innerHTML = '<option value="default">Default System Microphone</option>';
+                sourceSelect.innerHTML += '<option value="system">System Audio (via Screen Share)</option>';
+                audioDevices.forEach(d => {
+                    const label = d.label || `Microphone (${d.deviceId.substring(0, 5)})`;
+                    const opt = document.createElement('option');
+                    opt.value = d.deviceId;
+                    opt.innerText = label;
+                    sourceSelect.appendChild(opt);
+                });
+                
+                if (appSettings.deviceId) {
+                    sourceSelect.value = appSettings.deviceId;
+                }
+            } catch (err) {
+                console.error("Error populating input devices:", err);
+            }
+        }
+
+        function saveSettings() {
+            appSettings.format = document.getElementById('settingFormat').value;
+            appSettings.bitrate = document.getElementById('settingBitrate').value;
+            appSettings.channels = document.getElementById('settingChannels').value;
+            
+            const oldDevice = appSettings.deviceId;
+            appSettings.deviceId = document.getElementById('settingSource').value;
+            
+            if (oldDevice !== appSettings.deviceId) {
+                if (globalStream) {
+                    globalStream.getTracks().forEach(track => track.stop());
+                    globalStream = null;
+                }
+            }
+            
+            localStorage.setItem('voiceRecorderSettings', JSON.stringify(appSettings));
+        }
+
+        // Bind settings event listeners on DOM Load
+        document.addEventListener('DOMContentLoaded', () => {
+            const formatSelect = document.getElementById('settingFormat');
+            const bitrateSelect = document.getElementById('settingBitrate');
+            const channelsSelect = document.getElementById('settingChannels');
+            const sourceSelect = document.getElementById('settingSource');
+            
+            if (formatSelect) formatSelect.addEventListener('change', () => { toggleBitrateVisibility(); saveSettings(); });
+            if (bitrateSelect) bitrateSelect.addEventListener('change', saveSettings);
+            if (channelsSelect) channelsSelect.addEventListener('change', saveSettings);
+            if (sourceSelect) sourceSelect.addEventListener('change', saveSettings);
+            
+            document.querySelectorAll('.theme-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    const color = dot.dataset.color;
+                    const hover = dot.dataset.hover;
+                    appSettings.themeColor = color;
+                    appSettings.themeHover = hover;
+                    applyTheme(color, hover);
+                    saveSettings();
+                });
+            });
+        });
+
+        // Initialize DB and load recordings
         initDB().then(() => {
             loadRecordingsFromDB();
         });
@@ -593,15 +1022,81 @@
         async function initAudio() {
             if (!globalStream) {
                 try {
-                    globalStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    if (appSettings.deviceId === 'system') {
+                        // Request screen capture with system audio enabled (disabling voice optimization filters for music quality)
+                        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                            video: { width: 1, height: 1 },
+                            audio: {
+                                echoCancellation: false,
+                                noiseSuppression: false,
+                                autoGainControl: false
+                            }
+                        });
+                        
+                        // Stop video track immediately to prevent resource usage
+                        displayStream.getVideoTracks().forEach(track => track.stop());
+                        
+                        const audioTracks = displayStream.getAudioTracks();
+                        if (audioTracks.length === 0) {
+                            alert("No audio track shared. When sharing, please check 'Share audio' or 'System audio'.");
+                            return false;
+                        }
+                        
+                        globalStream = new MediaStream(audioTracks);
+                    } else {
+                        const constraints = {
+                            audio: appSettings.deviceId && appSettings.deviceId !== 'default' 
+                                ? { deviceId: { exact: appSettings.deviceId } }
+                                : true
+                        };
+                        globalStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    }
                     setupVisualizer(globalStream);
                 } catch (err) {
-                    console.error("Error accessing microphone:", err);
-                    alert("Could not access microphone. Please check permissions.");
+                    console.error("Error accessing audio source:", err);
+                    alert("Could not access audio source. Please check settings/permissions.");
                     return false;
                 }
             }
             return true;
+        }
+
+        function updateTimer() {
+            const now = Date.now();
+            const diff = new Date(now - startTime);
+            const mins = diff.getUTCMinutes().toString().padStart(2, '0');
+            const secs = diff.getUTCSeconds().toString().padStart(2, '0');
+            timerDisplay.innerText = `${mins}:${secs}`;
+        }
+
+        function setupVisualizer(stream) {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const source = audioContext.createMediaStreamSource(stream);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+            draw();
+        }
+
+        function draw() {
+            animationId = requestAnimationFrame(draw);
+            analyser.getByteFrequencyData(dataArray);
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            const barWidth = (canvas.width / dataArray.length) * 2.5;
+            let barHeight;
+            let x = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                barHeight = dataArray[i] / 2;
+                canvasCtx.fillStyle = appSettings.themeColor || '#0ea800';
+                canvasCtx.globalAlpha = Math.min(1.0, barHeight / 100 + 0.3);
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+            canvasCtx.globalAlpha = 1.0;
         }
 
         async function toggleRecording() {
@@ -638,54 +1133,64 @@
             mediaRecorder.stop();
             recordBtn.classList.remove('recording');
             recordBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
-            statusText.innerText = "Recording saved";
+            statusText.innerText = "Processing audio...";
             clearInterval(timerInterval);
         }
 
-        function updateTimer() {
-            const now = Date.now();
-            const diff = new Date(now - startTime);
-            const mins = diff.getUTCMinutes().toString().padStart(2, '0');
-            const secs = diff.getUTCSeconds().toString().padStart(2, '0');
-            timerDisplay.innerText = `${mins}:${secs}`;
-        }
-
-        function setupVisualizer(stream) {
-            if (audioContext) return;
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaStreamSource(stream);
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
-            source.connect(analyser);
-            const bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
-            draw();
-        }
-
-        function draw() {
-            animationId = requestAnimationFrame(draw);
-            analyser.getByteFrequencyData(dataArray);
-            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-            const barWidth = (canvas.width / dataArray.length) * 2.5;
-            let barHeight;
-            let x = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                barHeight = dataArray[i] / 2;
-                canvasCtx.fillStyle = `rgba(14, 168, 0, ${barHeight / 100 + 0.3})`;
-                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-                x += barWidth + 1;
+        async function saveRecording() {
+            statusText.innerText = "Processing audio...";
+            
+            // Temporary blob from raw media recorder chunks
+            const rawBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+            
+            // Decode raw blob to AudioBuffer
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
+            let buffer;
+            try {
+                const arrayBuffer = await rawBlob.arrayBuffer();
+                buffer = await audioContext.decodeAudioData(arrayBuffer);
+            } catch (err) {
+                console.error("Failed to decode raw recording stream:", err);
+                alert("Processing failed. Saving raw file instead.");
+                processAndSave(rawBlob, 'wav');
+                return;
+            }
+            
+            // Respect settings: format (wav/mp3), channels (1/2), bitrate
+            const format = appSettings.format || 'wav';
+            const channels = parseInt(appSettings.channels || '1');
+            const bitrate = parseInt(appSettings.bitrate || '128');
+            
+            // Adjust channels if needed by downmixing/upmixing
+            let finalBuffer = buffer;
+            if (buffer.numberOfChannels !== channels) {
+                finalBuffer = audioContext.createBuffer(channels, buffer.length, buffer.sampleRate);
+                for (let c = 0; c < channels; c++) {
+                    const srcChan = buffer.getChannelData(c % buffer.numberOfChannels);
+                    finalBuffer.getChannelData(c).set(srcChan);
+                }
+            }
+            
+            let finalBlob;
+            if (format === 'mp3' && typeof lamejs !== 'undefined') {
+                finalBlob = bufferToMp3(finalBuffer, bitrate);
+            } else {
+                finalBlob = bufferToWav(finalBuffer);
+            }
+            
+            processAndSave(finalBlob, format);
         }
 
-        function saveRecording() {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        function processAndSave(audioBlob, format) {
             const audioUrl = URL.createObjectURL(audioBlob);
 
             const now = new Date();
             const pad = (n) => n.toString().padStart(2, '0');
             const dateStr = now.toISOString().split('T')[0];
             const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-            const filename = `recording_${dateStr}_${timeStr}.wav`;
+            const filename = `recording_${dateStr}_${timeStr}.${format}`;
 
             const year = now.getFullYear();
             const month = pad(now.getMonth() + 1);
@@ -700,18 +1205,20 @@
 
             const id = Date.now().toString();
             const audioObj = new Audio(audioUrl);
-            const recording = { id, url: audioUrl, filename, blob: audioBlob, audio: audioObj, displayTime };
+            const recording = { id, url: audioUrl, filename, blob: audioBlob, audio: audioObj, displayTime, isEditing: false, selection: null };
             recordings.push(recording);
 
             saveRecordingToDB(recording).catch(err => console.error("Failed to save to DB", err));
 
             renderRecordingItem(recording);
             timerDisplay.innerText = "00:00";
+            statusText.innerText = "Recording saved";
 
             audioObj.addEventListener('timeupdate', () => updateProgressUI(id));
             audioObj.addEventListener('ended', () => resetPlayerUI(id));
             audioObj.addEventListener('loadedmetadata', () => {
-                document.getElementById(`time-${id}`).innerText = formatTime(audioObj.duration);
+                const el = document.getElementById(`time-${id}`);
+                if (el) el.innerText = formatTime(audioObj.duration);
             });
         }
 
@@ -725,6 +1232,9 @@
                 <div class="recording-header">
                     <span class="timestamp">${rec.displayTime}</span>
                     <div class="header-actions">
+                          <button class="icon-btn edit-btn" id="edit-btn-${rec.id}" onclick="toggleEditMode(event, '${rec.id}')" title="Trim Audio" style="font-size: 16px; line-height: 1;">
+                            ✂
+                        </button>
                          <button class="icon-btn" onclick="downloadRecording(event, '${rec.id}')" title="Download">
                             <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
                         </button>
@@ -737,7 +1247,7 @@
                     </div>
                 </div>
                 
-                <div class="custom-player">
+                <div class="custom-player" onclick="event.stopPropagation()">
                     <button class="play-btn" onclick="togglePlay(event, '${rec.id}')">
                         <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     </button>
@@ -745,6 +1255,30 @@
                         <div class="progress-bar" id="progress-${rec.id}"></div>
                     </div>
                     <span class="duration-text" id="time-${rec.id}">00:00</span>
+                </div>
+
+                <div class="waveform-wrapper" onclick="event.stopPropagation()">
+                    <div class="waveform-container" id="wf-container-${rec.id}" style="position: relative;">
+                        <canvas id="canvas-${rec.id}"></canvas>
+                        <div class="trim-processing-overlay" id="trim-overlay-${rec.id}" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); border-radius: 8px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                            <div style="display: flex; align-items: center; gap: 8px; color: var(--text-main); font-size: 0.8rem;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" style="animation: spin 1s linear infinite; fill: currentColor;"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                                Processing...
+                            </div>
+                        </div>
+                    </div>
+                    <div class="waveform-edit-bar" id="edit-bar-${rec.id}" style="display: none;">
+                        <span class="edit-info-text" id="edit-info-${rec.id}">
+                            Drag on waveform to select region to cut.
+                        </span>
+                        <div class="waveform-edit-buttons">
+                            <button class="edit-action-btn cancel" id="undo-btn-${rec.id}" style="display: none;" onclick="undoTrim(event, '${rec.id}')" title="Undo"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;"><path d="M12.5 8c-2.65 0-5.05 1.04-6.83 2.73L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg> Undo</button>
+                            <button class="edit-action-btn cancel" id="redo-btn-${rec.id}" style="display: none;" onclick="redoTrim(event, '${rec.id}')" title="Redo"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg> Redo</button>
+                            <button class="edit-action-btn cut" id="cut-btn-${rec.id}" style="display: none;" onclick="cutSelection(event, '${rec.id}')">✂ Cut</button>
+                            <button class="edit-action-btn cancel" onclick="discardTrimChanges(event, '${rec.id}')">Cancel</button>
+                            <button class="edit-action-btn cut" id="save-trim-btn-${rec.id}" style="display: none; background: var(--primary-color);" onclick="saveTrimChanges(event, '${rec.id}')">Save</button>
+                        </div>
+                    </div>
                 </div>
             `;
             recordingsList.prepend(recordingItem);
@@ -762,6 +1296,9 @@
                 }
             });
 
+            // Expand active recording item
+            expandItem(id);
+
             const btn = e.currentTarget;
             if (rec.audio.paused) {
                 rec.audio.play();
@@ -776,14 +1313,22 @@
             const rec = getRecording(id);
             if (!rec) return;
             const progress = (rec.audio.currentTime / rec.audio.duration) * 100;
-            document.getElementById(`progress-${id}`).style.width = `${progress}%`;
-            document.getElementById(`time-${id}`).innerText = formatTime(rec.audio.currentTime);
+            const progressEl = document.getElementById(`progress-${id}`);
+            if (progressEl) progressEl.style.width = `${progress}%`;
+            const timeEl = document.getElementById(`time-${id}`);
+            if (timeEl) timeEl.innerText = formatTime(rec.audio.currentTime);
+
+            const itemEl = document.querySelector(`.recording-item[data-id="${id}"]`);
+            if (itemEl && itemEl.classList.contains('expanded')) {
+                drawWaveform(id);
+            }
         }
 
         function resetPlayerUI(id) {
             const btn = document.querySelector(`.recording-item[data-id="${id}"] .play-btn`);
             if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-            document.getElementById(`progress-${id}`).style.width = '0%';
+            const progressEl = document.getElementById(`progress-${id}`);
+            if (progressEl) progressEl.style.width = '0%';
         }
 
         function seek(e, id) {
@@ -798,6 +1343,659 @@
 
             rec.audio.currentTime = pct * rec.audio.duration;
             updateProgressUI(id);
+        }
+
+        // --- Waveform Rendering and Audio Splicing Logic ---
+        const audioBufferCache = new Map();
+
+        async function getAudioBuffer(rec) {
+            if (audioBufferCache.has(rec.id)) {
+                return audioBufferCache.get(rec.id);
+            }
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            try {
+                const arrayBuffer = await rec.blob.arrayBuffer();
+                const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                audioBufferCache.set(rec.id, decodedBuffer);
+                return decodedBuffer;
+            } catch (err) {
+                console.error("Audio decoding failed:", err);
+                return null;
+            }
+        }
+
+        async function expandItem(id) {
+            const items = document.querySelectorAll('.recording-item');
+            items.forEach(el => {
+                if (el.dataset.id === id) {
+                    el.classList.add('expanded');
+                } else {
+                    el.classList.remove('expanded');
+                    const otherRec = getRecording(el.dataset.id);
+                    if (otherRec && otherRec.isEditing) {
+                        exitEditMode(otherRec.id);
+                    }
+                }
+            });
+
+            const rec = getRecording(id);
+            if (!rec) return;
+
+            // Trigger decode asynchronously
+            if (!audioBufferCache.has(id)) {
+                drawWaveform(id); // Draws loading message
+                await getAudioBuffer(rec);
+            }
+
+            initWaveformInteractivity(id);
+            drawWaveform(id);
+        }
+
+        function initWaveformInteractivity(id) {
+            const container = document.getElementById(`wf-container-${id}`);
+            if (!container || container.dataset.listenersInit === "true") return;
+            container.dataset.listenersInit = "true";
+
+            let isDragging = false;
+            let startX = 0;
+            let startRatio = 0;
+            let hasDragged = false;
+
+            function getRatio(e) {
+                const rect = container.getBoundingClientRect();
+                const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+                const x = clientX - rect.left;
+                return Math.max(0, Math.min(1, x / rect.width));
+            }
+
+            function handleStart(e) {
+                const rec = getRecording(id);
+                if (!rec) return;
+
+                isDragging = true;
+                hasDragged = false;
+                const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+                startX = clientX;
+                startRatio = getRatio(e);
+
+                if (!rec.isEditing) {
+                    rec.audio.currentTime = startRatio * rec.audio.duration;
+                    updateProgressUI(id);
+                }
+            }
+
+            function handleMove(e) {
+                if (!isDragging) return;
+                const rec = getRecording(id);
+                if (!rec) return;
+
+                const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+                const ratio = getRatio(e);
+
+                if (rec.isEditing) {
+                    if (Math.abs(clientX - startX) > 5) {
+                        hasDragged = true;
+                    }
+                    if (hasDragged) {
+                        rec.selection = { start: startRatio, end: ratio };
+                        updateEditSelectionText(id);
+                        drawWaveform(id);
+                    }
+                } else {
+                    rec.audio.currentTime = ratio * rec.audio.duration;
+                    updateProgressUI(id);
+                }
+            }
+
+            function handleEnd(e) {
+                if (!isDragging) return;
+                isDragging = false;
+                const rec = getRecording(id);
+                if (!rec) return;
+
+                if (rec.isEditing && !hasDragged) {
+                    rec.audio.currentTime = startRatio * rec.audio.duration;
+                    updateProgressUI(id);
+                }
+            }
+
+            container.addEventListener('mousedown', handleStart);
+            container.addEventListener('mousemove', handleMove);
+            window.addEventListener('mouseup', handleEnd);
+
+            container.addEventListener('touchstart', handleStart, { passive: true });
+            container.addEventListener('touchmove', handleMove, { passive: true });
+            window.addEventListener('touchend', handleEnd, { passive: true });
+        }
+
+        function updateEditSelectionText(id) {
+            const rec = getRecording(id);
+            if (!rec) return;
+            const infoText = document.getElementById(`edit-info-${id}`);
+            const cutBtn = document.getElementById(`cut-btn-${id}`);
+            if (!infoText) return;
+
+            if (rec.selection) {
+                const duration = rec.audio.duration || 0;
+                const startSec = Math.min(rec.selection.start, rec.selection.end) * duration;
+                const endSec = Math.max(rec.selection.start, rec.selection.end) * duration;
+                const selectedDuration = endSec - startSec;
+
+                infoText.innerHTML = `Selected: <strong>${formatTime(startSec)}</strong> to <strong>${formatTime(endSec)}</strong> (${selectedDuration.toFixed(1)}s)`;
+                if (cutBtn) cutBtn.style.display = 'inline-block';
+            } else {
+                infoText.innerText = "Drag on waveform to select region to delete.";
+                if (cutBtn) cutBtn.style.display = 'none';
+            }
+        }
+
+        // --- Trim History Stack (per recording) ---
+        const trimHistory = new Map(); // id -> { undoStack: [AudioBuffer], redoStack: [AudioBuffer] }
+
+        function getTrimHistory(id) {
+            if (!trimHistory.has(id)) {
+                trimHistory.set(id, { undoStack: [], redoStack: [] });
+            }
+            return trimHistory.get(id);
+        }
+
+        function updateUndoRedoButtons(id) {
+            const history = getTrimHistory(id);
+            const undoBtn = document.getElementById(`undo-btn-${id}`);
+            const redoBtn = document.getElementById(`redo-btn-${id}`);
+            const saveBtn = document.getElementById(`save-trim-btn-${id}`);
+            if (undoBtn) undoBtn.style.display = history.undoStack.length > 0 ? 'inline-flex' : 'none';
+            if (redoBtn) redoBtn.style.display = history.redoStack.length > 0 ? 'inline-flex' : 'none';
+            if (saveBtn) saveBtn.style.display = history.undoStack.length > 0 ? 'inline-flex' : 'none';
+        }
+
+        function showTrimOverlay(id, show) {
+            const overlay = document.getElementById(`trim-overlay-${id}`);
+            if (overlay) overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        async function toggleEditMode(e, id) {
+            e.stopPropagation();
+            const rec = getRecording(id);
+            if (!rec) return;
+
+            if (rec.isEditing) {
+                const history = getTrimHistory(id);
+                if (history.undoStack.length > 0) {
+                    if (confirm("You have unsaved changes. Discard them?")) {
+                        discardTrimChanges(e, id);
+                    }
+                } else {
+                    exitEditMode(id);
+                }
+                return;
+            }
+
+            // Pause if playing
+            if (!rec.audio.paused) {
+                rec.audio.pause();
+                resetPlayerUI(id);
+            }
+
+            // Expand the item
+            await expandItem(id);
+
+            // Initialize history for this editing session
+            const history = getTrimHistory(id);
+            history.undoStack = [];
+            history.redoStack = [];
+
+            rec.isEditing = true;
+            document.getElementById(`edit-btn-${id}`).classList.add('edit-active');
+            document.getElementById(`edit-bar-${id}`).style.display = 'flex';
+            updateEditSelectionText(id);
+            updateUndoRedoButtons(id);
+            drawWaveform(id);
+        }
+
+        function exitEditMode(id) {
+            const rec = getRecording(id);
+            if (!rec) return;
+            rec.isEditing = false;
+            rec.selection = null;
+            const btn = document.getElementById(`edit-btn-${id}`);
+            if (btn) btn.classList.remove('edit-active');
+            const bar = document.getElementById(`edit-bar-${id}`);
+            if (bar) bar.style.display = 'none';
+            // Clear history
+            trimHistory.delete(id);
+            drawWaveform(id);
+        }
+
+        function discardTrimChanges(e, id) {
+            e.stopPropagation();
+            const history = getTrimHistory(id);
+            // Restore original buffer if we have undo history
+            if (history.undoStack.length > 0) {
+                const originalBuffer = history.undoStack[0];
+                audioBufferCache.set(id, originalBuffer);
+                // Rebuild audio from original buffer
+                rebuildAudioFromBuffer(id, originalBuffer);
+            }
+            exitEditMode(id);
+        }
+
+        async function undoTrim(e, id) {
+            e.stopPropagation();
+            const history = getTrimHistory(id);
+            if (history.undoStack.length === 0) return;
+
+            // Current buffer goes to redo
+            const currentBuffer = audioBufferCache.get(id);
+            history.redoStack.push(currentBuffer);
+
+            // Pop previous buffer from undo
+            const prevBuffer = history.undoStack.pop();
+            audioBufferCache.set(id, prevBuffer);
+
+            rebuildAudioFromBuffer(id, prevBuffer);
+            const rec = getRecording(id);
+            rec.selection = null;
+            updateEditSelectionText(id);
+            updateUndoRedoButtons(id);
+            drawWaveform(id);
+        }
+
+        async function redoTrim(e, id) {
+            e.stopPropagation();
+            const history = getTrimHistory(id);
+            if (history.redoStack.length === 0) return;
+
+            // Current buffer goes to undo
+            const currentBuffer = audioBufferCache.get(id);
+            history.undoStack.push(currentBuffer);
+
+            // Pop next buffer from redo
+            const nextBuffer = history.redoStack.pop();
+            audioBufferCache.set(id, nextBuffer);
+
+            rebuildAudioFromBuffer(id, nextBuffer);
+            const rec = getRecording(id);
+            rec.selection = null;
+            updateEditSelectionText(id);
+            updateUndoRedoButtons(id);
+            drawWaveform(id);
+        }
+
+        function rebuildAudioFromBuffer(id, buffer) {
+            const rec = getRecording(id);
+            if (!rec) return;
+
+            rec.audio.pause();
+
+            const blob = bufferToWav(buffer);
+            const url = URL.createObjectURL(blob);
+            const newAudio = new Audio(url);
+            rec.audio = newAudio;
+
+            newAudio.addEventListener('timeupdate', () => updateProgressUI(id));
+            newAudio.addEventListener('ended', () => resetPlayerUI(id));
+            newAudio.addEventListener('loadedmetadata', () => {
+                const el = document.getElementById(`time-${id}`);
+                if (el) el.innerText = formatTime(newAudio.duration);
+            });
+
+            resetPlayerUI(id);
+            newAudio.load();
+        }
+
+        async function cutSelection(e, id) {
+            e.stopPropagation();
+            const rec = getRecording(id);
+            if (!rec || !rec.selection) return;
+
+            const buffer = audioBufferCache.get(id);
+            if (!buffer) return;
+
+            const duration = buffer.length / buffer.sampleRate;
+            const startRatio = Math.min(rec.selection.start, rec.selection.end);
+            const endRatio = Math.max(rec.selection.start, rec.selection.end);
+
+            const startSec = startRatio * duration;
+            const endSec = endRatio * duration;
+
+            if (startSec >= endSec) return;
+
+            const fs = buffer.sampleRate;
+            const startSample = Math.floor(startSec * fs);
+            const endSample = Math.floor(endSec * fs);
+            const deleteLength = endSample - startSample;
+
+            if (deleteLength <= 0 || deleteLength >= buffer.length) {
+                alert("Cannot delete the entire recording.");
+                return;
+            }
+
+            // Show processing overlay
+            showTrimOverlay(id, true);
+
+            // Use setTimeout to let the UI paint the overlay before heavy work
+            await new Promise(resolve => setTimeout(resolve, 30));
+
+            // Push current buffer to undo stack
+            const history = getTrimHistory(id);
+            history.undoStack.push(buffer);
+            history.redoStack = []; // Clear redo on new action
+
+            const newLength = buffer.length - deleteLength;
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const splicedBuffer = audioCtx.createBuffer(
+                buffer.numberOfChannels,
+                newLength,
+                fs
+            );
+
+            for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+                const oldData = buffer.getChannelData(channel);
+                const newData = splicedBuffer.getChannelData(channel);
+                newData.set(oldData.subarray(0, startSample), 0);
+                newData.set(oldData.subarray(endSample), startSample);
+            }
+
+            audioBufferCache.set(id, splicedBuffer);
+            rebuildAudioFromBuffer(id, splicedBuffer);
+
+            rec.selection = null;
+            updateEditSelectionText(id);
+            updateUndoRedoButtons(id);
+            drawWaveform(id);
+
+            showTrimOverlay(id, false);
+        }
+
+        async function saveTrimChanges(e, id) {
+            e.stopPropagation();
+            const rec = getRecording(id);
+            if (!rec) return;
+
+            const buffer = audioBufferCache.get(id);
+            if (!buffer) return;
+
+            showTrimOverlay(id, true);
+            await new Promise(resolve => setTimeout(resolve, 30));
+
+            let newBlob;
+            if (rec.filename.endsWith('.mp3') && typeof lamejs !== 'undefined') {
+                const bitrate = parseInt(appSettings.bitrate || '128');
+                newBlob = bufferToMp3(buffer, bitrate);
+            } else {
+                newBlob = bufferToWav(buffer);
+            }
+            const newUrl = URL.createObjectURL(newBlob);
+
+            rec.audio.pause();
+
+            try {
+                const transaction = db.transaction(['recordings'], 'readwrite');
+                const store = transaction.objectStore('recordings');
+                const { audio, url, isEditing, selection, ...dataToSave } = rec;
+                dataToSave.blob = newBlob;
+                dataToSave.url = newUrl;
+                await new Promise((resolve, reject) => {
+                    const req = store.put(dataToSave);
+                    req.onsuccess = resolve;
+                    req.onerror = reject;
+                });
+            } catch (err) {
+                console.error("Failed to update db:", err);
+                alert("Failed to save edited recording.");
+                showTrimOverlay(id, false);
+                return;
+            }
+
+            rec.blob = newBlob;
+            rec.url = newUrl;
+
+            const newAudio = new Audio(newUrl);
+            rec.audio = newAudio;
+
+            newAudio.addEventListener('timeupdate', () => updateProgressUI(id));
+            newAudio.addEventListener('ended', () => resetPlayerUI(id));
+            newAudio.addEventListener('loadedmetadata', () => {
+                const el = document.getElementById(`time-${id}`);
+                if (el) el.innerText = formatTime(newAudio.duration);
+            });
+
+            resetPlayerUI(id);
+            newAudio.load();
+
+            showTrimOverlay(id, false);
+            exitEditMode(id);
+        }
+
+        function drawWaveform(recId) {
+            const rec = getRecording(recId);
+            if (!rec) return;
+
+            const canvas = document.getElementById(`canvas-${recId}`);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Adjust canvas resolution dynamically
+            const displayWidth = canvas.clientWidth || 300;
+            const displayHeight = canvas.clientHeight || 90;
+            
+            if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
+                canvas.width = displayWidth * dpr;
+                canvas.height = displayHeight * dpr;
+            }
+            
+            ctx.save();
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            const buffer = audioBufferCache.get(recId);
+            if (!buffer) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '11px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Decoding waveform...', displayWidth / 2, displayHeight / 2);
+                ctx.restore();
+                return;
+            }
+
+            const channelData = buffer.getChannelData(0);
+            const step = Math.ceil(channelData.length / displayWidth);
+
+            const barWidth = 2;
+            const gap = 1;
+            const playedColor = '#0ea800'; // Green theme primary
+            const unplayedColor = 'rgba(255, 255, 255, 0.25)';
+
+            const progressPct = rec.audio.currentTime / rec.audio.duration || 0;
+            const progressX = progressPct * displayWidth;
+
+            const selection = rec.selection;
+
+            for (let i = 0; i < displayWidth; i += (barWidth + gap)) {
+                let min = 1.0;
+                let max = -1.0;
+                for (let j = 0; j < step; j++) {
+                    const idx = i * step + j;
+                    if (idx >= channelData.length) break;
+                    const datum = channelData[idx];
+                    if (datum < min) min = datum;
+                    if (datum > max) max = datum;
+                }
+
+                const val = Math.max(Math.abs(min), Math.abs(max));
+                const barHeight = Math.max(3, val * displayHeight * 0.85);
+                const y = (displayHeight - barHeight) / 2;
+
+                const ratio = i / displayWidth;
+                let isSelected = false;
+                if (selection) {
+                    const selStart = Math.min(selection.start, selection.end);
+                    const selEnd = Math.max(selection.start, selection.end);
+                    if (ratio >= selStart && ratio <= selEnd) {
+                        isSelected = true;
+                    }
+                }
+
+                if (isSelected) {
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.85)'; // Highlight selection red
+                } else if (i <= progressX) {
+                    ctx.fillStyle = playedColor;
+                } else {
+                    ctx.fillStyle = unplayedColor;
+                }
+
+                drawRoundedRect(ctx, i, y, barWidth, barHeight, 1);
+            }
+
+            // Draw selection shaded overlay
+            if (selection) {
+                const selStart = Math.min(selection.start, selection.end);
+                const selEnd = Math.max(selection.start, selection.end);
+                const startX = selStart * displayWidth;
+                const endX = selEnd * displayWidth;
+
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+                ctx.fillRect(startX, 0, endX - startX, displayHeight);
+
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(startX, 0);
+                ctx.lineTo(startX, displayHeight);
+                ctx.moveTo(endX, 0);
+                ctx.lineTo(endX, displayHeight);
+                ctx.stroke();
+            }
+
+            // Draw scrubber playhead
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(progressX, 0);
+            ctx.lineTo(progressX, displayHeight);
+            ctx.stroke();
+
+            // Draw playhead dot
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(progressX, displayHeight / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawRoundedRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w, y + h - r);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function bufferToWav(buffer) {
+            let numOfChan = buffer.numberOfChannels,
+                length = buffer.length * numOfChan * 2 + 44,
+                bufferArr = new ArrayBuffer(length),
+                view = new DataView(bufferArr),
+                channels = [], i, sample,
+                offset = 0,
+                pos = 0;
+
+            function setUint16(data) {
+                view.setUint16(pos, data, true);
+                pos += 2;
+            }
+
+            function setUint32(data) {
+                view.setUint32(pos, data, true);
+                pos += 4;
+            }
+
+            setUint32(0x46464952);                         // "RIFF"
+            setUint32(length - 8);                         // file length - 8
+            setUint32(0x45564157);                         // "WAVE"
+
+            setUint32(0x20746d66);                         // "fmt " chunk
+            setUint32(16);                                 // chunk length
+            setUint16(1);                                  // raw PCM format
+            setUint16(numOfChan);
+            setUint32(buffer.sampleRate);
+            setUint32(buffer.sampleRate * 2 * numOfChan);  // byte rate
+            setUint16(numOfChan * 2);                      // block align
+            setUint16(16);                                 // bits per sample
+
+            setUint32(0x61746164);                         // "data" chunk
+            setUint32(length - pos - 4);                   // chunk length
+
+            for (i = 0; i < buffer.numberOfChannels; i++)
+                channels.push(buffer.getChannelData(i));
+
+            while (pos < length) {
+                for (i = 0; i < numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF);
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+
+            return new Blob([bufferArr], { type: 'audio/wav' });
+        }
+
+        function bufferToMp3(buffer, bitrate = 128) {
+            const mp3encoder = new lamejs.Mp3Encoder(buffer.numberOfChannels, buffer.sampleRate, bitrate);
+            const mp3Data = [];
+            
+            const sampleBlockSize = 1152;
+            const left = buffer.getChannelData(0);
+            const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : null;
+            
+            const lp = new Int16Array(left.length);
+            const rp = right ? new Int16Array(right.length) : null;
+            
+            for (let i = 0; i < left.length; i++) {
+                let s = Math.max(-1, Math.min(1, left[i]));
+                lp[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                if (rp) {
+                    s = Math.max(-1, Math.min(1, right[i]));
+                    rp[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                }
+            }
+            
+            for (let i = 0; i < lp.length; i += sampleBlockSize) {
+                const leftChunk = lp.subarray(i, i + sampleBlockSize);
+                let mp3buf;
+                if (rp) {
+                    const rightChunk = rp.subarray(i, i + sampleBlockSize);
+                    mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+                } else {
+                    mp3buf = mp3encoder.encodeBuffer(leftChunk);
+                }
+                if (mp3buf.length > 0) {
+                    mp3Data.push(mp3buf);
+                }
+            }
+            
+            const mp3buf = mp3encoder.flush();
+            if (mp3buf.length > 0) {
+                mp3Data.push(mp3buf);
+            }
+            
+            return new Blob(mp3Data, { type: 'audio/mp3' });
         }
 
         function toggleSelection(e, id) {
@@ -857,19 +2055,57 @@
             }
         }
 
+        // Modal Logic
+        let pendingDeleteId = null;
+        let pendingDeleteType = null; // 'single' or 'bulk'
+        const deleteModal = document.getElementById('deleteModal');
+        const modalText = document.getElementById('modalText');
+
+        function openDeleteModal(type, id = null, count = 0) {
+            pendingDeleteType = type;
+            pendingDeleteId = id;
+            if (type === 'single') {
+                modalText.innerText = "This will permanently delete the recording.";
+            } else {
+                modalText.innerText = `This will permanently delete ${count} recordings.`;
+            }
+            deleteModal.classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            deleteModal.classList.remove('active');
+            pendingDeleteId = null;
+            pendingDeleteType = null;
+        }
+
+        function confirmDelete() {
+            if (pendingDeleteType === 'single' && pendingDeleteId) {
+                // Execute Single Delete
+                const id = pendingDeleteId;
+                const index = recordings.findIndex(r => r.id === id);
+                if (index > -1) recordings.splice(index, 1);
+                deleteRecordingFromDB(id);
+                const el = document.querySelector(`.recording-item[data-id="${id}"]`);
+                if (el) el.remove();
+                updateBulkActions();
+            } else if (pendingDeleteType === 'bulk') {
+                // Execute Bulk Delete
+                const ids = getSelectedIds();
+                ids.forEach(id => {
+                    const index = recordings.findIndex(r => r.id === id);
+                    if (index > -1) recordings.splice(index, 1);
+                    deleteRecordingFromDB(id);
+                    const el = document.querySelector(`.recording-item[data-id="${id}"]`);
+                    if (el) el.remove();
+                });
+                clearSelection();
+            }
+            closeDeleteModal();
+        }
+
         function deleteRecording(e, id) {
             e.stopPropagation();
-            if (!confirm('Delete recording?')) return;
-
-            const index = recordings.findIndex(r => r.id === id);
-            if (index > -1) recordings.splice(index, 1);
-
-            deleteRecordingFromDB(id);
-
-            const el = document.querySelector(`.recording-item[data-id="${id}"]`);
-            if (el) el.remove();
-
-            updateBulkActions();
+            openDeleteModal('single', id);
         }
 
         function getSelectedIds() {
@@ -897,17 +2133,7 @@
         function handleBulkDelete() {
             const ids = getSelectedIds();
             if (!ids.length) return;
-            if (!confirm(`Delete ${ids.length} items?`)) return;
-
-            ids.forEach(id => {
-                const index = recordings.findIndex(r => r.id === id);
-                if (index > -1) recordings.splice(index, 1);
-
-                deleteRecordingFromDB(id);
-
-                document.querySelector(`.recording-item[data-id="${id}"]`).remove();
-            });
-            clearSelection();
+            openDeleteModal('bulk', null, ids.length);
         }
 
         function handleBulkShare() {
