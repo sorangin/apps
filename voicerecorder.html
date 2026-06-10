@@ -875,7 +875,9 @@
 
                 request.onsuccess = (event) => {
                     const savedRecordings = event.target.result;
-                    savedRecordings.sort((a, b) => b.id - a.id);
+                    // Sort ascending (oldest first) so that prepend() in renderRecordingItem
+                    // produces newest-on-top, matching the order used during live recording.
+                    savedRecordings.sort((a, b) => a.id - b.id);
 
                     savedRecordings.forEach(recData => {
                         const audioUrl = URL.createObjectURL(recData.blob);
@@ -1173,7 +1175,10 @@
 
             mediaRecorder.onstop = saveRecording;
 
-            mediaRecorder.start();
+            // Use a 1-second timeslice so audio chunks are pushed periodically.
+            // This prevents recording silence when the tab/app is backgrounded,
+            // because without a timeslice, data is only captured on stop().
+            mediaRecorder.start(1000);
 
             // Show visualizer and timer
             document.querySelector('.visualizer-container').style.display = 'flex';
@@ -1202,6 +1207,17 @@
             // Hide visualizer and timer
             document.querySelector('.visualizer-container').style.display = 'none';
             document.getElementById('timer').style.display = 'none';
+
+            // Release the microphone so other apps can use it
+            if (globalStream) {
+                globalStream.getTracks().forEach(track => track.stop());
+                globalStream = null;
+            }
+            // Clean up the visualizer animation
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
         }
 
         async function saveRecording() {
@@ -1634,6 +1650,10 @@
 
             rec.isEditing = true;
             document.getElementById(`edit-btn-${id}`).classList.add('edit-active');
+            // Hide bulk actions bar and record button during trim mode
+            bulkActions.classList.remove('visible');
+            recordBtn.classList.remove('bulk-visible');
+            recordBtn.style.display = 'none';
             document.getElementById(`edit-bar-${id}`).style.display = 'flex';
             updateEditSelectionText(id);
             updateUndoRedoButtons(id);
@@ -1645,6 +1665,10 @@
             if (!rec) return;
             rec.isEditing = false;
             rec.selection = null;
+            // Restore bulk actions bar visibility based on current selection
+            updateBulkActions();
+            // Restore record button
+            recordBtn.style.display = '';
             const btn = document.getElementById(`edit-btn-${id}`);
             if (btn) btn.classList.remove('edit-active');
             const bar = document.getElementById(`edit-bar-${id}`);
@@ -2139,8 +2163,9 @@
             const rec = getRecording(id);
             if (navigator.share) {
                 try {
-                    const file = new File([rec.blob], rec.filename, { type: 'audio/wav' });
-                    await navigator.share({ files: [file], title: 'Voice Recording' });
+                    const mimeType = rec.filename.endsWith('.mp3') ? 'audio/mp3' : 'audio/wav';
+                    const file = new File([rec.blob], rec.filename, { type: mimeType });
+                    await navigator.share({ files: [file], title: rec.filename });
                 } catch (err) { console.log('Share failed:', err); }
             } else {
                 alert('Sharing not supported.');
@@ -2174,6 +2199,10 @@
             if (pendingDeleteType === 'single' && pendingDeleteId) {
                 // Execute Single Delete
                 const id = pendingDeleteId;
+                const rec = getRecording(id);
+                if (rec && rec.audio) {
+                    rec.audio.pause();
+                }
                 const index = recordings.findIndex(r => r.id === id);
                 if (index > -1) recordings.splice(index, 1);
                 deleteRecordingFromDB(id);
@@ -2184,6 +2213,10 @@
                 // Execute Bulk Delete
                 const ids = getSelectedIds();
                 ids.forEach(id => {
+                    const rec = getRecording(id);
+                    if (rec && rec.audio) {
+                        rec.audio.pause();
+                    }
                     const index = recordings.findIndex(r => r.id === id);
                     if (index > -1) recordings.splice(index, 1);
                     deleteRecordingFromDB(id);
@@ -2252,9 +2285,14 @@
             if (navigator.share) {
                 const files = ids.map(id => {
                     const rec = getRecording(id);
-                    return new File([rec.blob], rec.filename, { type: 'audio/wav' });
+                    const mimeType = rec.filename.endsWith('.mp3') ? 'audio/mp3' : 'audio/wav';
+                    return new File([rec.blob], rec.filename, { type: mimeType });
                 });
-                navigator.share({ files, title: 'Voice Recordings' }).catch(e => console.log(e));
+                navigator.share({ 
+                    files, 
+                    title: `${files.length} Voice Recordings`,
+                    text: files.map(f => f.name).join(', ')
+                }).catch(e => console.log(e));
             } else { alert('Bulk share not supported'); }
             clearSelection();
         }
