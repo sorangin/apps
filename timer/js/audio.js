@@ -48,6 +48,9 @@ const AudioMgr = {
     playDefaultBeep() {
         const playNoise = () => {
             if (!this.ctx) return;
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume().catch(e => console.warn('Ctx resume failed', e));
+            }
             const t = this.ctx.currentTime;
             const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
             o.connect(g); g.connect(this.ctx.destination);

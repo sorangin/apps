@@ -99,6 +99,11 @@ const Alarm = {
         if (saved) { try { this.alarms = JSON.parse(saved); this.render(); } catch (e) { } }
         Picker.init();
         setInterval(() => this.check(), 1000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.check();
+            }
+        });
         document.querySelectorAll('.day-btn').forEach(btn => {
             btn.addEventListener('click', (e) => { e.target.classList.toggle('selected'); });
         });
@@ -107,11 +112,13 @@ const Alarm = {
     check() {
         const now = new Date();
         const nowStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        const nowSec = now.getSeconds();
         const currentDay = now.getDay();
+        const dateStr = now.getDate();
         let changed = false;
         this.alarms.forEach(a => {
-            if (a.active && a.time24 === nowStr && nowSec === 0) {
+            const triggerKey = `${dateStr}_${nowStr}`;
+            if (a.active && a.time24 === nowStr && a.lastTriggeredKey !== triggerKey) {
+                a.lastTriggeredKey = triggerKey;
                 const days = a.days || [];
                 if (days.length === 0 || days.includes(currentDay)) {
                     if (days.length === 0) { a.active = false; changed = true; }

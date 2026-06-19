@@ -28,13 +28,32 @@ const Timer = {
                 }
             } catch (e) { }
         }
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.syncTimer();
+            }
+        });
+        this.duration = this.timeLeft;
         this.updateDisplay();
+    },
+
+    syncTimer() {
+        if (!this.isRunning) return;
+        const now = Date.now();
+        if (now >= this.targetEndTime) {
+            this.timeLeft = 0;
+            this.updateDisplay();
+            this.complete();
+        } else {
+            this.timeLeft = Math.max(0, Math.ceil((this.targetEndTime - now) / 1000));
+            this.updateDisplay();
+        }
     },
 
     parseInput() {
         const txt = this.display.textContent.trim(); let s = 0;
         if (txt.includes(':')) { const p = txt.split(':'); s = (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0); } else s = (parseInt(txt) || 0) * 60;
-        if (s > 0) { this.timeLeft = s; this.container.classList.remove('finished'); this.updateDisplay(); this.start(); } else this.updateDisplay();
+        if (s > 0) { this.timeLeft = s; this.duration = this.timeLeft; this.container.classList.remove('finished'); this.updateDisplay(); this.start(); } else this.updateDisplay();
     },
 
     savePreset(el) {
@@ -60,12 +79,19 @@ const Timer = {
         this.stop();
         this.container.classList.remove('finished');
         this.timeLeft = m * 60;
+        this.duration = this.timeLeft;
         document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
         if (btn) btn.classList.add('active');
         this.updateDisplay(); this.start();
     },
 
-    toggle() { if (this.isRunning) this.stop(); else this.start(); },
+    toggle() {
+        if (this.container.classList.contains('finished')) {
+            this.resetAfterFinish();
+        } else {
+            if (this.isRunning) this.stop(); else this.start();
+        }
+    },
 
     start() {
         AudioMgr.init();
@@ -73,10 +99,23 @@ const Timer = {
         if (this.timeLeft <= 0) return;
         clearInterval(this.timerId);
         this.isRunning = true;
+        this.targetEndTime = Date.now() + this.timeLeft * 1000;
         this.container.classList.add('running');
         this.playIcon.style.display = 'none'; this.pauseIcon.style.display = 'block';
         this.toggleBtn.style.backgroundColor = 'var(--accent)'; this.toggleBtn.style.color = '#fff';
-        this.timerId = setInterval(() => { if (!this.isEditing) { this.timeLeft--; this.updateDisplay(); if (this.timeLeft <= 0) this.complete(); } }, 1000);
+        this.timerId = setInterval(() => {
+            if (!this.isEditing) {
+                const now = Date.now();
+                if (now >= this.targetEndTime) {
+                    this.timeLeft = 0;
+                    this.updateDisplay();
+                    this.complete();
+                } else {
+                    this.timeLeft = Math.max(0, Math.ceil((this.targetEndTime - now) / 1000));
+                    this.updateDisplay();
+                }
+            }
+        }, 1000);
         this.updateEndTime();
     },
 
@@ -84,6 +123,9 @@ const Timer = {
         this.isRunning = false; clearInterval(this.timerId); this.container.classList.remove('running');
         this.playIcon.style.display = 'block'; this.pauseIcon.style.display = 'none';
         this.toggleBtn.style.backgroundColor = 'var(--text-primary)'; this.toggleBtn.style.color = 'var(--bg)';
+        if (this.targetEndTime) {
+            this.timeLeft = Math.max(0, Math.ceil((this.targetEndTime - Date.now()) / 1000));
+        }
         this.updateDisplay();
         Background.stopPersistence();
     },
@@ -93,7 +135,20 @@ const Timer = {
         this.container.classList.add('finished');
         Background.sendNotification("Timer Finished", "Your countdown has ended.");
         AudioMgr.startSound();
-        setTimeout(() => { AudioMgr.stopSound(); Background.stopPersistence(); }, 3000);
+        if (this.completeTimeout) clearTimeout(this.completeTimeout);
+        this.completeTimeout = setTimeout(() => { this.resetAfterFinish(); }, 60000);
+    },
+
+    resetAfterFinish() {
+        if (this.completeTimeout) {
+            clearTimeout(this.completeTimeout);
+            this.completeTimeout = null;
+        }
+        AudioMgr.stopSound();
+        Background.stopPersistence();
+        this.container.classList.remove('finished');
+        this.timeLeft = this.duration || 1200;
+        this.updateDisplay();
     },
 
     updateDisplay() {
