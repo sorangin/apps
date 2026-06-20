@@ -804,6 +804,16 @@
         const recordings = [];
         let db;
 
+        // Background recording keep-alive state
+        let wakeLock = null;
+        let keepAliveOscillator = null;
+        let keepAliveGain = null;
+
+        // Live rolling waveform state
+        let liveWaveformData = [];
+        let lastSampleTime = 0;
+        const WAVEFORM_SAMPLE_INTERVAL = 50; // ms between amplitude samples
+
         const recordBtn = document.getElementById('recordBtn');
         const timerDisplay = document.getElementById('timer');
         const statusText = document.getElementById('status');
@@ -1132,28 +1142,68 @@
             }
             const source = audioContext.createMediaStreamSource(stream);
             analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
+            analyser.fftSize = 2048;
             source.connect(analyser);
-            const bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
+            dataArray = new Uint8Array(analyser.fftSize);
             draw();
         }
 
         function draw() {
             animationId = requestAnimationFrame(draw);
-            analyser.getByteFrequencyData(dataArray);
-            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-            const barWidth = (canvas.width / dataArray.length) * 2.5;
-            let barHeight;
-            let x = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                barHeight = dataArray[i] / 2;
-                canvasCtx.fillStyle = appSettings.themeColor || '#0ea800';
-                canvasCtx.globalAlpha = Math.min(1.0, barHeight / 100 + 0.3);
-                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-                x += barWidth + 1;
+            analyser.getByteTimeDomainData(dataArray);
+
+            // Sample peak amplitude at regular intervals and accumulate
+            const now = performance.now();
+            if (now - lastSampleTime >= WAVEFORM_SAMPLE_INTERVAL) {
+                let peak = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const amp = Math.abs(dataArray[i] - 128) / 128;
+                    if (amp > peak) peak = amp;
+                }
+                liveWaveformData.push(peak);
+                lastSampleTime = now;
             }
+
+            // --- Render the accumulated waveform ---
+            const dpr = window.devicePixelRatio || 1;
+            const displayWidth = canvas.clientWidth || 300;
+            const displayHeight = canvas.clientHeight || 80;
+
+            if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
+                canvas.width = displayWidth * dpr;
+                canvas.height = displayHeight * dpr;
+            }
+
+            canvasCtx.save();
+            canvasCtx.scale(dpr, dpr);
+            canvasCtx.clearRect(0, 0, displayWidth, displayHeight);
+
+            const centerY = displayHeight / 2;
+            const themeColor = appSettings.themeColor || '#0ea800';
+            const barWidth = 2;
+            const gap = 1;
+            const step = barWidth + gap;
+            const maxBars = Math.floor(displayWidth / step);
+
+            // Show only the latest N samples that fit on screen
+            const visible = liveWaveformData.length > maxBars
+                ? liveWaveformData.slice(-maxBars)
+                : liveWaveformData;
+
+            // Draw bars mirrored around center (matching playback waveform style)
+            for (let i = 0; i < visible.length; i++) {
+                const amplitude = visible[i];
+                const barHeight = Math.max(3, amplitude * displayHeight * 0.85);
+                const x = i * step;
+                const y = centerY - barHeight / 2;
+
+                canvasCtx.fillStyle = themeColor;
+                canvasCtx.globalAlpha = Math.min(1.0, amplitude * 1.5 + 0.4);
+                drawRoundedRect(canvasCtx, x, y, barWidth, barHeight, 1);
+            }
+
             canvasCtx.globalAlpha = 1.0;
+            canvasCtx.restore();
         }
 
         async function toggleRecording() {
@@ -1167,6 +1217,8 @@
 
         async function startRecording() {
             audioChunks = [];
+            liveWaveformData = [];
+            lastSampleTime = 0;
             mediaRecorder = new MediaRecorder(globalStream);
 
             mediaRecorder.ondataavailable = (event) => {
@@ -1184,10 +1236,6 @@
             document.querySelector('.visualizer-container').style.display = 'flex';
             document.getElementById('timer').style.display = 'block';
 
-            // Resize canvas to match layout size
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
-
             recordBtn.classList.add('recording');
             recordBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
             statusText.innerText = "Recording...";
@@ -1195,6 +1243,9 @@
             startTime = Date.now();
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
+
+            // Keep audio pipeline alive when app is backgrounded
+            startKeepAlive();
         }
 
         function stopRecording() {
@@ -1218,7 +1269,85 @@
                 cancelAnimationFrame(animationId);
                 animationId = null;
             }
+            // Release background keep-alive resources
+            stopKeepAlive();
         }
+
+        // --- Background Recording Keep-Alive ---
+        // Mobile browsers aggressively suspend backgrounded tabs/PWAs, which kills
+        // the MediaRecorder audio pipeline. Two countermeasures:
+        // 1) A near-silent oscillator output: the browser won't suspend a page
+        //    that is actively producing audio output.
+        // 2) Screen Wake Lock API: prevents the device from sleeping entirely.
+        async function startKeepAlive() {
+            // Screen Wake Lock
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    // Re-acquire if the lock is released (e.g. tab switch on some devices)
+                    wakeLock.addEventListener('release', async () => {
+                        // Only re-acquire if we're still recording
+                        if (mediaRecorder && mediaRecorder.state === 'recording') {
+                            try {
+                                wakeLock = await navigator.wakeLock.request('screen');
+                            } catch (e) { /* ignore */ }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log('Wake lock not available:', e);
+            }
+
+            // Silent oscillator — keeps the audio rendering thread alive
+            if (audioContext) {
+                try {
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+                    keepAliveOscillator = audioContext.createOscillator();
+                    keepAliveOscillator.frequency.value = 1; // 1 Hz — completely inaudible
+                    keepAliveGain = audioContext.createGain();
+                    keepAliveGain.gain.value = 0.001; // ~-60 dB, effectively silent
+                    keepAliveOscillator.connect(keepAliveGain);
+                    keepAliveGain.connect(audioContext.destination);
+                    keepAliveOscillator.start();
+                } catch (e) {
+                    console.log('Keep-alive oscillator failed:', e);
+                }
+            }
+        }
+
+        function stopKeepAlive() {
+            if (wakeLock) {
+                wakeLock.release().catch(() => {});
+                wakeLock = null;
+            }
+            if (keepAliveOscillator) {
+                try { keepAliveOscillator.stop(); } catch (e) {}
+                keepAliveOscillator.disconnect();
+                keepAliveOscillator = null;
+            }
+            if (keepAliveGain) {
+                keepAliveGain.disconnect();
+                keepAliveGain = null;
+            }
+        }
+
+        // Re-acquire wake lock when returning to the app (visibility change)
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && mediaRecorder && mediaRecorder.state === 'recording') {
+                // Re-acquire wake lock if it was lost
+                if (!wakeLock && 'wakeLock' in navigator) {
+                    try {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                    } catch (e) { /* ignore */ }
+                }
+                // Ensure audio context is running
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }
+        });
 
         async function saveRecording() {
             statusText.innerText = "Processing audio...";
@@ -1313,19 +1442,22 @@
 
             recordingItem.innerHTML = `
                 <div class="recording-header" onclick="toggleExpand(event, '${rec.id}')">
-                    <span class="timestamp">${rec.displayTime}</span>
+                    <div class="title-container" onclick="event.stopPropagation();" style="display: inline-flex; align-items: center; max-width: 60%; flex-grow: 1;">
+                        <span class="timestamp" id="title-text-${rec.id}" onclick="startRename('${rec.id}')" style="cursor: pointer; word-break: break-all; display: inline-block;">${rec.displayTime}</span>
+                        <input type="text" id="title-input-${rec.id}" value="${rec.displayTime}" onblur="finishRename('${rec.id}')" onkeydown="handleRenameKey(event, '${rec.id}')" style="display: none; background: rgba(255,255,255,0.1); border: 1px solid var(--primary-color); border-radius: 4px; color: var(--text-main); font-size: 0.8rem; font-family: inherit; padding: 2px 6px; width: 100%; box-sizing: border-box; outline: none;">
+                    </div>
                     <div class="header-actions">
                           <button class="icon-btn edit-btn" id="edit-btn-${rec.id}" onclick="toggleEditMode(event, '${rec.id}')" title="Trim Audio" style="font-size: 16px; line-height: 1;">
                             ✂
                         </button>
                          <button class="icon-btn" onclick="downloadRecording(event, '${rec.id}')" title="Download">
-                            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                             <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
                         </button>
                         <button class="icon-btn" onclick="shareRecording(event, '${rec.id}')" title="Share">
-                            <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                             <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
                         </button>
                         <button class="icon-btn delete" onclick="deleteRecording(event, '${rec.id}')" title="Delete">
-                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                             <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                         </button>
                     </div>
                 </div>
@@ -2147,6 +2279,76 @@
 
         function getRecording(id) {
             return recordings.find(r => r.id === id);
+        }
+
+        function startRename(id) {
+            const textEl = document.getElementById(`title-text-${id}`);
+            const inputEl = document.getElementById(`title-input-${id}`);
+            if (!textEl || !inputEl) return;
+
+            textEl.style.display = 'none';
+            inputEl.style.display = 'inline-block';
+            inputEl.focus();
+            inputEl.select();
+        }
+
+        async function finishRename(id) {
+            const textEl = document.getElementById(`title-text-${id}`);
+            const inputEl = document.getElementById(`title-input-${id}`);
+            if (!textEl || !inputEl) return;
+
+            const newName = inputEl.value.trim();
+            textEl.style.display = 'inline-block';
+            inputEl.style.display = 'none';
+
+            if (!newName) {
+                inputEl.value = textEl.innerText;
+                return;
+            }
+
+            const rec = getRecording(id);
+            if (rec && rec.displayTime !== newName) {
+                rec.displayTime = newName;
+                textEl.innerText = newName;
+
+                // Also update the download filename format if it matches the generic style
+                const format = rec.filename.split('.').pop() || 'wav';
+                if (rec.filename.startsWith('recording_') || rec.filename.startsWith('Voice Recording')) {
+                    // Sanitize filename to avoid weird character issues
+                    const safeName = newName.replace(/[^a-zA-Z0-9_\-\s]/g, '_');
+                    rec.filename = `${safeName}.${format}`;
+                }
+
+                // Update in IndexedDB
+                try {
+                    const transaction = db.transaction(['recordings'], 'readwrite');
+                    const store = transaction.objectStore('recordings');
+                    const { audio, url, isEditing, selection, ...dataToSave } = rec;
+                    await new Promise((resolve, reject) => {
+                        const req = store.put(dataToSave);
+                        req.onsuccess = resolve;
+                        req.onerror = reject;
+                    });
+                } catch (err) {
+                    console.error("Failed to rename recording in IndexedDB:", err);
+                }
+            }
+        }
+
+        function handleRenameKey(e, id) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                finishRename(id);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                const textEl = document.getElementById(`title-text-${id}`);
+                const inputEl = document.getElementById(`title-input-${id}`);
+                if (textEl && inputEl) {
+                    inputEl.value = textEl.innerText;
+                    textEl.style.display = 'inline-block';
+                    inputEl.style.display = 'none';
+                }
+            }
         }
 
         function downloadRecording(e, id) {
