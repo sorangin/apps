@@ -1080,6 +1080,14 @@
         // Initialize DB and load recordings
         initDB().then(() => {
             loadRecordingsFromDB();
+            // Request persistent storage to prevent browsers (especially iOS/Safari/Chrome mobile) from automatically purging the data
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().then(persisted => {
+                    console.log(`Persistent storage granted: ${persisted}`);
+                }).catch(err => {
+                    console.error("Failed to request persistent storage:", err);
+                });
+            }
         });
 
         async function initAudio() {
