@@ -835,19 +835,29 @@
                 const request = indexedDB.open('VoiceRecorderDB', 1);
 
                 request.onerror = (event) => {
-                    console.error("DB Error", event);
-                    reject('DB Error');
+                    console.error("DB Open Error:", event.target.error);
+                    reject(event.target.error || 'DB Error');
                 };
 
                 request.onupgradeneeded = (event) => {
-                    db = event.target.result;
-                    if (!db.objectStoreNames.contains('recordings')) {
-                        db.createObjectStore('recordings', { keyPath: 'id' });
+                    const upgradeDb = event.target.result;
+                    console.log("DB Upgrade/Init needed. Current stores:", upgradeDb.objectStoreNames);
+                    if (!upgradeDb.objectStoreNames.contains('recordings')) {
+                        upgradeDb.createObjectStore('recordings', { keyPath: 'id' });
+                        console.log("Object store 'recordings' created.");
                     }
                 };
 
                 request.onsuccess = (event) => {
                     db = event.target.result;
+                    console.log("DB Opened Successfully.");
+                    
+                    // Handle case where db is closed or deleted externally
+                    db.onversionchange = () => {
+                        db.close();
+                        console.warn("DB version change requested externally. Closing database to prevent loss.");
+                    };
+                    
                     resolve(db);
                 };
             });
@@ -1080,13 +1090,29 @@
         // Initialize DB and load recordings
         initDB().then(() => {
             loadRecordingsFromDB();
-            // Request persistent storage to prevent browsers (especially iOS/Safari/Chrome mobile) from automatically purging the data
+            // Request persistent storage and log details
             if (navigator.storage && navigator.storage.persist) {
                 navigator.storage.persist().then(persisted => {
-                    console.log(`Persistent storage granted: ${persisted}`);
+                    console.log(`Persistent storage status: ${persisted ? 'PERSISTENT' : 'BEST-EFFORT'}`);
                 }).catch(err => {
                     console.error("Failed to request persistent storage:", err);
                 });
+            }
+            // Log storage space estimate & alert if running critically low
+            if (navigator.storage && navigator.storage.estimate) {
+                navigator.storage.estimate().then(estimate => {
+                    const usedMB = (estimate.usage / (1024 * 1024)).toFixed(1);
+                    const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(1);
+                    const percentUsed = ((estimate.usage / estimate.quota) * 100).toFixed(1);
+                    console.log(`Storage used: ${usedMB} MB / ${quotaMB} MB (${percentUsed}%)`);
+                    
+                    // Alert user if remaining space is under 50MB
+                    const remainingMB = (estimate.quota - estimate.usage) / (1024 * 1024);
+                    if (remainingMB < 50) {
+                        console.warn(`Critically low space remaining: ${remainingMB.toFixed(1)} MB`);
+                        statusText.innerText = "Warning: Device storage space is critically low!";
+                    }
+                }).catch(err => console.error("Error estimating storage space:", err));
             }
         });
 
