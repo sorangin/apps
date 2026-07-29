@@ -783,12 +783,15 @@
         linkManifest.setAttribute('href', URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' })));
         document.head.appendChild(linkManifest);
 
-        // 3. Fake Service Worker (Required for "Add to Homescreen" heuristics)
+        // Explicitly unregister any stale/broken service workers (especially blob-URL SWs)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register(
-                URL.createObjectURL(new Blob(['self.addEventListener("fetch", (e) => {});'], { type: "text/javascript" })),
-                { scope: window.location.href }
-            ).catch(err => console.log('SW Error:', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister().then(unregistered => {
+                        console.log('Unregistered stale Service Worker:', unregistered);
+                    });
+                }
+            }).catch(err => console.log('SW Unregister Error:', err));
         }
 
         // --- App Logic ---
@@ -829,95 +832,211 @@
         document.getElementById('bulkShare').addEventListener('click', handleBulkShare);
         selectAllBtn.addEventListener('click', toggleSelectAll);
 
-        // --- IndexedDB Logic ---
+        // --- Dual Storage: IndexedDB + Cache API Backup ---
+        // Mobile browsers (especially iOS Safari) purge IndexedDB after ~7 days
+        // of inactivity. We store every recording in BOTH IndexedDB and the Cache API.
+        // On load, we cross-check both and recover from whichever has data.
+
+        const CACHE_NAME = 'VoiceRecorderBackup-v1';
+
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open('VoiceRecorderDB', 1);
-
                 request.onerror = (event) => {
                     console.error("DB Open Error:", event.target.error);
                     reject(event.target.error || 'DB Error');
                 };
-
                 request.onupgradeneeded = (event) => {
                     const upgradeDb = event.target.result;
-                    console.log("DB Upgrade/Init needed. Current stores:", upgradeDb.objectStoreNames);
                     if (!upgradeDb.objectStoreNames.contains('recordings')) {
                         upgradeDb.createObjectStore('recordings', { keyPath: 'id' });
-                        console.log("Object store 'recordings' created.");
                     }
                 };
-
                 request.onsuccess = (event) => {
                     db = event.target.result;
-                    console.log("DB Opened Successfully.");
-                    
-                    // Handle case where db is closed or deleted externally
                     db.onversionchange = () => {
                         db.close();
-                        console.warn("DB version change requested externally. Closing database to prevent loss.");
+                        console.warn("DB version change — closing.");
                     };
-                    
                     resolve(db);
                 };
             });
         }
 
+        // --- Cache API helpers ---
+        async function saveToCacheBackup(recording) {
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                // Store metadata as JSON
+                const meta = {
+                    id: recording.id,
+                    filename: recording.filename,
+                    displayTime: recording.displayTime
+                };
+                const metaResponse = new Response(JSON.stringify(meta), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                await cache.put(`/voicerecorder/meta/${recording.id}`, metaResponse);
+
+                // Store audio blob
+                const blobResponse = new Response(recording.blob, {
+                    headers: { 'Content-Type': recording.blob.type || 'audio/wav' }
+                });
+                await cache.put(`/voicerecorder/blob/${recording.id}`, blobResponse);
+            } catch (err) {
+                console.error("Cache backup save failed:", err);
+            }
+        }
+
+        async function deleteFromCacheBackup(id) {
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                await cache.delete(`/voicerecorder/meta/${id}`);
+                await cache.delete(`/voicerecorder/blob/${id}`);
+            } catch (err) {
+                console.error("Cache backup delete failed:", err);
+            }
+        }
+
+        async function loadAllFromCacheBackup() {
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                const keys = await cache.keys();
+                const metaKeys = keys.filter(k => k.url.includes('/voicerecorder/meta/'));
+                const results = [];
+                for (const key of metaKeys) {
+                    const metaResp = await cache.match(key);
+                    if (!metaResp) continue;
+                    const meta = await metaResp.json();
+                    const blobResp = await cache.match(`/voicerecorder/blob/${meta.id}`);
+                    if (!blobResp) continue;
+                    const blob = await blobResp.blob();
+                    results.push({ ...meta, blob });
+                }
+                return results;
+            } catch (err) {
+                console.error("Cache backup load failed:", err);
+                return [];
+            }
+        }
+
+        // --- IndexedDB helpers ---
         async function saveRecordingToDB(recording) {
-            const { audio, url, ...dataToSave } = recording; // Strip non-clonable
-
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['recordings'], 'readwrite');
-                const store = transaction.objectStore('recordings');
-                const request = store.add(dataToSave);
-
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(request.error);
-            });
+            const { audio, url, ...dataToSave } = recording;
+            // Save to IndexedDB
+            try {
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['recordings'], 'readwrite');
+                    const store = transaction.objectStore('recordings');
+                    const request = store.put(dataToSave); // use put instead of add for idempotence
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (err) {
+                console.error("IndexedDB save failed:", err);
+            }
+            // Also save to Cache API backup
+            await saveToCacheBackup(recording);
         }
 
         async function deleteRecordingFromDB(id) {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['recordings'], 'readwrite');
-                const store = transaction.objectStore('recordings');
-                const request = store.delete(id);
-
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(request.error);
-            });
+            // Delete from IndexedDB
+            try {
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['recordings'], 'readwrite');
+                    const store = transaction.objectStore('recordings');
+                    const request = store.delete(id);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (err) {
+                console.error("IndexedDB delete failed:", err);
+            }
+            // Also delete from Cache API backup
+            await deleteFromCacheBackup(id);
         }
 
         async function loadRecordingsFromDB() {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['recordings'], 'readonly');
-                const store = transaction.objectStore('recordings');
-                const request = store.getAll();
+            // Load from IndexedDB
+            let idbRecordings = [];
+            try {
+                idbRecordings = await new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['recordings'], 'readonly');
+                    const store = transaction.objectStore('recordings');
+                    const request = store.getAll();
+                    request.onsuccess = (event) => resolve(event.target.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (err) {
+                console.error("IndexedDB load failed:", err);
+            }
 
-                request.onsuccess = (event) => {
-                    const savedRecordings = event.target.result;
-                    // Sort ascending (oldest first) so that prepend() in renderRecordingItem
-                    // produces newest-on-top, matching the order used during live recording.
-                    savedRecordings.sort((a, b) => a.id - b.id);
+            // Load from Cache API backup
+            const cacheRecordings = await loadAllFromCacheBackup();
 
-                    savedRecordings.forEach(recData => {
-                        const audioUrl = URL.createObjectURL(recData.blob);
-                        const audioObj = new Audio(audioUrl);
-                        const fullRecording = { ...recData, url: audioUrl, audio: audioObj, isEditing: false, selection: null };
+            // Build a merged set — use whichever source has more data
+            const idbIds = new Set(idbRecordings.map(r => r.id));
+            const cacheIds = new Set(cacheRecordings.map(r => r.id));
 
-                        recordings.push(fullRecording);
-                        renderRecordingItem(fullRecording);
+            let sourceRecordings;
+            let needsResync = false;
 
-                        audioObj.addEventListener('timeupdate', () => updateProgressUI(fullRecording.id));
-                        audioObj.addEventListener('ended', () => resetPlayerUI(fullRecording.id));
-                        audioObj.addEventListener('loadedmetadata', () => {
-                            const el = document.getElementById(`time-${fullRecording.id}`);
-                            if (el) el.innerText = formatTime(audioObj.duration);
+            if (idbRecordings.length >= cacheRecordings.length) {
+                sourceRecordings = idbRecordings;
+                // Check if cache is missing any — resync cache from IDB
+                if (idbRecordings.length > 0 && cacheRecordings.length < idbRecordings.length) {
+                    needsResync = true;
+                    console.log(`Cache backup is behind (${cacheRecordings.length} vs ${idbRecordings.length} in IDB). Resyncing...`);
+                }
+            } else {
+                // Cache has MORE recordings than IDB — IDB was likely purged!
+                sourceRecordings = cacheRecordings;
+                console.warn(`IndexedDB was purged! Recovering ${cacheRecordings.length} recordings from Cache backup.`);
+                // Re-populate IndexedDB from cache
+                for (const rec of cacheRecordings) {
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const transaction = db.transaction(['recordings'], 'readwrite');
+                            const store = transaction.objectStore('recordings');
+                            const request = store.put(rec);
+                            request.onsuccess = () => resolve();
+                            request.onerror = () => reject(request.error);
                         });
-                    });
-                    resolve();
-                };
-                request.onerror = () => reject(request.error);
-            });
+                    } catch (err) {
+                        console.error(`Failed to restore recording ${rec.id} to IDB:`, err);
+                    }
+                }
+            }
+
+            // Sort ascending (oldest first) so prepend() produces newest-on-top
+            sourceRecordings.sort((a, b) => a.id - b.id);
+
+            for (const recData of sourceRecordings) {
+                if (!recData.blob) continue;
+                const audioUrl = URL.createObjectURL(recData.blob);
+                const audioObj = new Audio(audioUrl);
+                const fullRecording = { ...recData, url: audioUrl, audio: audioObj, isEditing: false, selection: null };
+
+                recordings.push(fullRecording);
+                renderRecordingItem(fullRecording);
+
+                audioObj.addEventListener('timeupdate', () => updateProgressUI(fullRecording.id));
+                audioObj.addEventListener('ended', () => resetPlayerUI(fullRecording.id));
+                audioObj.addEventListener('loadedmetadata', () => {
+                    const el = document.getElementById(`time-${fullRecording.id}`);
+                    if (el) el.innerText = formatTime(audioObj.duration);
+                });
+            }
+
+            // If IDB was the source but cache was behind, resync cache
+            if (needsResync) {
+                for (const rec of sourceRecordings) {
+                    if (!cacheIds.has(rec.id)) {
+                        await saveToCacheBackup(rec);
+                    }
+                }
+                console.log("Cache backup resync complete.");
+            }
         }
 
         // --- Settings Management ---
@@ -2028,6 +2147,9 @@
             rec.blob = newBlob;
             rec.url = newUrl;
 
+            // Sync to Cache API backup
+            await saveToCacheBackup(rec);
+
             const newAudio = new Audio(newUrl);
             rec.audio = newAudio;
 
@@ -2366,6 +2488,8 @@
                 } catch (err) {
                     console.error("Failed to rename recording in IndexedDB:", err);
                 }
+                // Sync rename to Cache API backup
+                await saveToCacheBackup(rec);
             }
         }
 
@@ -2532,6 +2656,8 @@
             } else { alert('Bulk share not supported'); }
             clearSelection();
         }
+
+
 
         function formatTime(seconds) {
             if (isNaN(seconds)) return "00:00";
