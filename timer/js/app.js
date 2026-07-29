@@ -64,6 +64,9 @@ const App = {
 
     switchTab(id, el) {
         Background.requestNotificationPermission();
+        if (typeof Timer !== 'undefined' && Timer.container && Timer.container.classList.contains('finished')) {
+            Timer.resetAfterFinish();
+        }
 
         // Pop up nav briefly
         const nav = document.getElementById('bottom-nav');

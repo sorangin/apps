@@ -15,6 +15,12 @@ const Timer = {
         this.display.addEventListener('blur', () => { this.isEditing = false; this.parseInput(); });
         this.display.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); this.display.blur(); } });
 
+        this.container.addEventListener('click', () => {
+            if (this.container.classList.contains('finished')) {
+                this.resetAfterFinish();
+            }
+        });
+
         const saved = localStorage.getItem('timer_presets');
         if (saved) {
             try {
@@ -76,6 +82,7 @@ const Timer = {
             const latest = parseFloat(btn.dataset.time);
             if (!isNaN(latest)) m = latest;
         }
+        this.resetAfterFinish();
         this.stop();
         this.container.classList.remove('finished');
         this.timeLeft = m * 60;
@@ -128,6 +135,7 @@ const Timer = {
         }
         this.updateDisplay();
         Background.stopPersistence();
+        AudioMgr.stopSound();
     },
 
     complete() {
