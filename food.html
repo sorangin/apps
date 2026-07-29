@@ -1,0 +1,2091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Ledger</title>
+    <meta name="description" content="A minimalist, ultra-clean rating log for your favorite restaurants and culinary discoveries.">
+    
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Monochromatic Premium Color Palette (Linear / Apple inspired) */
+            --bg-app: #fafafa;
+            --bg-panel: #ffffff;
+            --bg-hover: #f4f4f5;
+            --border: #e4e4e7;
+            
+            --text-main: #09090b;
+            --text-sub: #71717a;
+            --text-muted: #a1a1aa;
+            
+            --brand: #18181b;
+            --brand-hover: #27272a;
+            --brand-light: #f4f4f5;
+            
+            --good-dot: #10b981;
+            --good-bg: #ecfdf5;
+            --good-border: #a7f3d0;
+            --good-text: #065f46;
+            
+            --okay-dot: #f59e0b;
+            --okay-bg: #fffbeb;
+            --okay-border: #fde68a;
+            --okay-text: #92400e;
+            
+            --bad-dot: #ef4444;
+            --bad-bg: #fef2f2;
+            --bad-border: #fecaca;
+            --bad-text: #991b1b;
+            
+            --radius-ui: 8px;
+            --radius-card: 6px;
+            --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02);
+            --transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg-app: #09090b;
+            --bg-panel: #0d0d11;
+            --bg-hover: #18181b;
+            --border: #27272a;
+            
+            --text-main: #f4f4f5;
+            --text-sub: #a1a1aa;
+            --text-muted: #52525b;
+            
+            --brand: #f4f4f5;
+            --brand-hover: #e4e4e7;
+            --brand-light: #18181b;
+            
+            --good-bg: rgba(16, 185, 129, 0.12);
+            --good-border: rgba(16, 185, 129, 0.3);
+            --good-text: #34d399;
+            
+            --okay-bg: rgba(245, 158, 11, 0.12);
+            --okay-border: rgba(245, 158, 11, 0.3);
+            --okay-text: #fbbf24;
+            
+            --bad-bg: rgba(239, 68, 68, 0.12);
+            --bad-border: rgba(239, 68, 68, 0.3);
+            --bad-text: #f87171;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s, color 0.2s;
+            overflow: hidden;
+            letter-spacing: -0.01em;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: var(--radius-full);
+        }
+
+        /* Compact Header */
+        header {
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 48px;
+            z-index: 10;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            background-color: var(--brand);
+            color: var(--bg-panel);
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .logo-text h1 {
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Clean Search Bar */
+        .search-container {
+            position: relative;
+            width: 220px;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 28px;
+            padding: 0 10px 0 28px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            border-color: var(--text-sub);
+            background-color: var(--bg-panel);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* Minimal Button */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            height: 28px;
+            padding: 0 12px;
+            border-radius: var(--radius-card);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid var(--border);
+            background-color: var(--bg-panel);
+            color: var(--text-main);
+        }
+
+        .btn-primary {
+            background-color: var(--brand);
+            color: var(--bg-panel);
+            border-color: var(--brand);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--brand-hover);
+            border-color: var(--brand-hover);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .theme-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .theme-btn:hover {
+            background-color: var(--bg-hover);
+        }
+
+        /* Workspace Grid Layout */
+        .main-workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Sidebar Design */
+        .sidebar {
+            width: 190px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 12px 14px 6px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .category-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 8px;
+            border-radius: var(--radius-card);
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-sub);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .category-item:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-main);
+        }
+
+        .category-item.active {
+            background-color: var(--brand-light);
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .category-meta {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .category-count {
+            font-size: 9px;
+            background-color: var(--bg-app);
+            color: var(--text-sub);
+            padding: 1px 4px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .category-item.active .category-count {
+            background-color: var(--brand);
+            color: var(--bg-panel);
+        }
+
+        .category-actions-trigger {
+            opacity: 0;
+            transition: opacity 0.15s;
+            cursor: pointer;
+            padding: 1px;
+            border-radius: 3px;
+        }
+
+        .category-item:hover .category-actions-trigger {
+            opacity: 0.6;
+        }
+
+        .category-actions-trigger:hover {
+            opacity: 1;
+            background-color: var(--border);
+        }
+
+        .sidebar-footer {
+            padding: 8px 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .sidebar-footer .btn {
+            flex: 1;
+            height: 28px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-card);
+        }
+
+        /* Floating Add Button */
+        .floating-add-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35), 0 2px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .floating-add-btn:hover {
+            transform: scale(1.1);
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            box-shadow: 0 6px 24px rgba(37, 99, 235, 0.5), 0 3px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        .floating-add-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+            background-color: var(--bg-app);
+        }
+
+        .content-subheader {
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--bg-panel);
+            height: 40px;
+            flex-shrink: 0;
+        }
+
+        .category-title-area h2 {
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .view-controls {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background-color: var(--bg-app);
+            padding: 2px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .view-btn {
+            background: none;
+            border: none;
+            padding: 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            color: var(--text-sub);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .view-btn.active {
+            background-color: var(--bg-panel);
+            color: var(--text-main);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        /* Tooltip Styles */
+        #custom-tooltip {
+            position: fixed;
+            display: none;
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 8px 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            z-index: 9999;
+            pointer-events: none;
+            font-size: 11px;
+            line-height: 1.4;
+            max-width: 240px;
+            transition: opacity 0.1s ease, transform 0.1s ease;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        #custom-tooltip.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        #custom-tooltip .tooltip-section {
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        #custom-tooltip .tooltip-rating {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        #custom-tooltip .tooltip-notes {
+            color: var(--text-sub);
+            background: var(--bg-hover);
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            word-break: break-word;
+        }
+
+        /* Main Workspace Content (Kanban / Grid) */
+        .dashboard-content {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ultra Compact Flex Board for dynamic visible columns */
+        .kanban-board {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: start;
+        }
+
+        .kanban-column {
+            background-color: var(--bg-panel);
+            border-radius: var(--radius-ui);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-subtle);
+            display: flex;
+            flex-direction: column;
+            width: 260px; /* Rigid column width */
+            max-height: calc(100vh - 120px);
+        }
+
+        .kanban-column-header {
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .column-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .column-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: var(--radius-full);
+            display: inline-block;
+        }
+
+        .good .column-dot { background-color: var(--good-dot); }
+        .okay .column-dot { background-color: var(--okay-dot); }
+        .bad .column-dot { background-color: var(--bad-dot); }
+
+        .column-count {
+            font-size: 10px;
+            font-weight: 600;
+            background-color: var(--bg-app);
+            padding: 1px 4px;
+            border-radius: 4px;
+            color: var(--text-sub);
+        }
+
+        .kanban-column-list {
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            min-height: 80px;
+        }
+
+        /* Minimalist Modern Food Cards (Fully color-coded background) */
+        .food-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 8px 10px;
+            box-shadow: var(--shadow-subtle);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        /* Color-coded backgrounds and borders */
+        .food-card.good {
+            background-color: var(--good-bg);
+            border-color: var(--good-border);
+            color: var(--good-text);
+        }
+        .food-card.good .card-title {
+            color: var(--good-text);
+        }
+
+        .food-card.okay {
+            background-color: var(--okay-bg);
+            border-color: var(--okay-border);
+            color: var(--okay-text);
+        }
+        .food-card.okay .card-title {
+            color: var(--okay-text);
+        }
+
+        .food-card.bad {
+            background-color: var(--bad-bg);
+            border-color: var(--bad-border);
+            color: var(--bad-text);
+        }
+        .food-card.bad .card-title {
+            color: var(--bad-text);
+        }
+
+        .food-card:hover {
+            filter: brightness(0.96);
+            transform: translateY(-1px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 4px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 12px;
+            line-height: 1.25;
+        }
+
+        .card-notes {
+            font-size: 11px;
+            line-height: 1.25;
+            background: rgba(255, 255, 255, 0.45);
+            padding: 3px 5px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            color: inherit;
+        }
+
+        [data-theme="dark"] .card-notes {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            font-size: 9px;
+            height: 12px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .food-card:hover .card-actions {
+            opacity: 1;
+        }
+
+        .card-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.6;
+            padding: 1px;
+            border-radius: 3px;
+        }
+
+        .card-action-btn:hover {
+            opacity: 1;
+            background-color: rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="dark"] .card-action-btn:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Compact Grid Mode */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 240px));
+            gap: 8px;
+            justify-content: start;
+        }
+
+        /* Empty State */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 20px 10px;
+            background-color: var(--bg-panel);
+            border-radius: var(--radius-ui);
+            border: 1px dashed var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .empty-state-icon {
+            font-size: 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Modals (Minimal) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(1px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.12s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-ui);
+            width: 90%;
+            max-width: 340px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            transform: scale(0.98);
+            transition: transform 0.12s;
+            overflow: hidden;
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .modal-body {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .form-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        .form-control {
+            width: 100%;
+            height: 28px;
+            padding: 0 8px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--text-sub);
+        }
+
+        .rating-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .rating-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 28px;
+            border-radius: var(--radius-card);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 11px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .rating-option.good:hover, .rating-option.good.active {
+            border-color: var(--good-dot);
+            background-color: var(--good-bg);
+            color: var(--good-dot);
+        }
+
+        .rating-option.okay:hover, .rating-option.okay.active {
+            border-color: var(--okay-dot);
+            background-color: var(--okay-bg);
+            color: var(--okay-dot);
+        }
+
+        .rating-option.bad:hover, .rating-option.bad.active {
+            border-color: var(--bad-dot);
+            background-color: var(--bad-bg);
+            color: var(--bad-dot);
+        }
+
+        .modal-footer {
+            padding: 8px 12px;
+            border-top: 1px solid var(--border);
+            background-color: var(--bg-hover);
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+    </style>
+</head>
+<body>
+
+
+    <!-- Main App Workspace -->
+    <div class="main-workspace">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <!-- Sidebar Brand Header -->
+            <div style="padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background-color: var(--bg-panel);">
+                <div class="logo-icon">FL</div>
+                <div class="logo-text">
+                    <h1 style="font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif;">Food Ledger</h1>
+                </div>
+            </div>
+            
+            <div style="padding: 10px 10px 0 10px; display: flex; flex-direction: column; gap: 4px;">
+                <div class="category-item special-tab" id="tab-health-guide" onclick="app.setSection('health')" onmouseover="app.setSection('health')" style="font-weight: 600; color: #0284c7; background-color: rgba(2, 132, 199, 0.06); border: 1px solid rgba(2, 132, 199, 0.15); transition: var(--transition);">
+                    <span style="display:flex; align-items:center; gap:6px;">🥗 Healthy Foods</span>
+                </div>
+            </div>
+            <div style="height: 1px; background-color: var(--border); margin: 8px 10px 4px 10px;"></div>
+            <div class="sidebar-header">
+                <h2>Categories</h2>
+                <button class="card-action-btn" onclick="app.openCategoryModal()" title="Add Category" style="background: none; border: none; cursor: pointer; color: var(--text-muted);">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+            </div>
+            
+            <div class="category-list" id="category-list-container">
+                <!-- Populated dynamically -->
+            </div>
+
+            <!-- Import/Export Footer -->
+            <div class="sidebar-footer">
+                <button class="btn btn-secondary" onclick="app.exportData()" title="Export Backup JSON">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                </button>
+                <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" title="Import Backup JSON">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                </button>
+                <input type="file" id="import-file" style="display: none;" accept=".json" onchange="app.importData(event)">
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="content-area">
+            
+            <!-- Category Title & View Selector -->
+            <div class="content-subheader">
+                <div class="category-title-area">
+                    <h2 id="active-category-title">Loading...</h2>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <!-- Search -->
+                    <div class="search-container">
+                        <svg class="search-icon" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <input type="text" id="global-search" class="search-input" placeholder="Search..." oninput="app.handleSearch(this.value)">
+                    </div>
+
+                    <div class="view-controls">
+                        <button class="view-btn active" id="view-kanban-btn" onclick="app.setViewMode('kanban')" title="Columns View">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h4v14H4zM10 5h4v14h-4zM16 5h4v14h-4z"/></svg>
+                        </button>
+                        <button class="view-btn" id="view-grid-btn" onclick="app.setViewMode('grid')" title="Grid View">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+                        </button>
+                        <div style="width: 1px; height: 14px; background-color: var(--border); margin: 0 4px;"></div>
+                        <button class="view-btn" id="theme-toggle" onclick="app.toggleTheme()" title="Toggle Theme">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic View Container -->
+            <div class="dashboard-content">
+                <!-- Kanban View -->
+                <div id="kanban-view" class="kanban-board">
+                    <!-- Good Column -->
+                    <div class="kanban-column good" id="column-good">
+                        <div class="kanban-column-header">
+                            <span class="column-title"><span class="column-dot"></span> Good</span>
+                            <span class="column-count" id="kanban-good-count" onclick="app.pickRandomFood('good')" title="Can't decide? Click to pick a random food!">0</span>
+                        </div>
+                        <div class="kanban-column-list" id="kanban-good-list"></div>
+                    </div>
+                    <!-- Okay Column -->
+                    <div class="kanban-column okay" id="column-okay">
+                        <div class="kanban-column-header">
+                            <span class="column-title"><span class="column-dot"></span> Okay</span>
+                            <span class="column-count" id="kanban-okay-count" onclick="app.pickRandomFood('okay')" title="Can't decide? Click to pick a random food!">0</span>
+                        </div>
+                        <div class="kanban-column-list" id="kanban-okay-list"></div>
+                    </div>
+                    <!-- Bad Column -->
+                    <div class="kanban-column bad" id="column-bad">
+                        <div class="kanban-column-header">
+                            <span class="column-title"><span class="column-dot"></span> Bad</span>
+                            <span class="column-count" id="kanban-bad-count" onclick="app.pickRandomFood('bad')" title="Can't decide? Click to pick a random food!">0</span>
+                        </div>
+                        <div class="kanban-column-list" id="kanban-bad-list"></div>
+                    </div>
+                </div>
+
+                <!-- Card Grid View (Hidden by default) -->
+                <div id="grid-view" class="cards-grid" style="display: none;">
+                    <!-- Grid items will populate here -->
+                </div>
+
+                <!-- Healthy Foods View -->
+                <div id="health-view" style="display: none; padding: 12px;">
+                    <div style="width: 100%; display: flex; flex-direction: column; gap: 20px; padding-bottom: 80px;">
+                        
+                        <!-- Sleek Minimalist Calculator -->
+                        <div style="background-color: var(--bg-panel); padding: 14px 20px; border-radius: var(--radius-ui); border: 1px solid var(--border); box-shadow: var(--shadow-subtle); display: flex; align-items: center; gap: 24px; width: fit-content; align-self: flex-start;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 6px; height: 28px; background: #3b82f6; border-radius: 3px; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);"></div>
+                                <div>
+                                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: var(--text-sub); letter-spacing: 0.05em;">Total Estimated Protein</div>
+                                    <div id="health-calc-protein" style="font-size: 22px; font-weight: 800; color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.1; margin-top: 1px;">0g</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="app.clearHealthCalc()" style="height: 28px; font-size: 10px; padding: 0 12px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;">Reset</button>
+                        </div>
+
+                        <!-- Grid of Food Categories -->
+                        <div id="health-categories-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Category Modal -->
+    <div id="category-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="category-modal-title">Create Category</h3>
+                <button class="modal-close-btn" onclick="app.closeCategoryModal()">&times;</button>
+            </div>
+            <form onsubmit="app.saveCategory(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="edit-category-id">
+                    <div class="form-group">
+                        <label for="category-name" class="form-label">Category Name</label>
+                        <input type="text" id="category-name" class="form-control" placeholder="e.g. Dim Sum, Boba" required>
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <input type="text" id="category-description" class="form-control" value="">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeCategoryModal()">Cancel</button>
+                    <button type="button" id="delete-category-btn" class="btn" style="background-color: var(--bad-bg); border-color: var(--bad-border); color: var(--bad-dot); display: none;" onclick="app.deleteCategoryClick()">Delete</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Item Modal -->
+    <div id="item-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="item-modal-title">Add Food Spot</h3>
+                <button class="modal-close-btn" onclick="app.closeItemModal()">&times;</button>
+            </div>
+            <form onsubmit="app.saveItem(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="edit-item-id">
+                    <div class="form-group">
+                        <label for="item-name" class="form-label">Name</label>
+                        <input type="text" id="item-name" class="form-control" placeholder="e.g. HeyTea, Sen Dai Sushi" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-category" class="form-label">Category</label>
+                        <select id="item-category" class="form-control" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rating</label>
+                        <div class="rating-selector">
+                            <div class="rating-option good active" id="rate-good" onclick="app.selectModalRating('good')">
+                                <span class="column-dot"></span> Good
+                            </div>
+                            <div class="rating-option okay" id="rate-okay" onclick="app.selectModalRating('okay')">
+                                <span class="column-dot"></span> Okay
+                            </div>
+                            <div class="rating-option bad" id="rate-bad" onclick="app.selectModalRating('bad')">
+                                <span class="column-dot"></span> Bad
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-notes" class="form-label">Notes (Optional)</label>
+                        <input type="text" id="item-notes" class="form-control" placeholder="e.g. Skinny Noodles, Double Cream">
+                    </div>
+                    <div class="form-group">
+                        <label for="item-location" class="form-label">Location (Optional)</label>
+                        <input type="text" id="item-location" class="form-control" placeholder="e.g. San Jose, SoCal">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeItemModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Random Pick Modal -->
+    <div id="random-pick-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 300px; text-align: center;">
+            <div class="modal-header">
+                <h3 style="font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;">🎲 Gourmet Decider</h3>
+                <button class="modal-close-btn" onclick="app.closeRandomPickModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); font-weight: 600;">How about this?</div>
+                <h2 id="random-pick-name" style="font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--brand); margin: 4px 0;">-</h2>
+                <div id="random-pick-location" style="font-size: 11px; color: var(--text-sub); display: none;">📍 -</div>
+                <div id="random-pick-notes" style="font-size: 11px; font-style: italic; color: var(--text-sub); background: var(--bg-hover); padding: 6px 12px; border-radius: 4px; width: 100%; border: 1px solid var(--border); display: none;">-</div>
+            </div>
+            <div class="modal-footer" style="justify-content: center; background-color: var(--bg-panel); border-top: none; padding-bottom: 16px;">
+                <button class="btn btn-primary" onclick="app.closeRandomPickModal()" style="width: 100%;">Sounds Good!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip Portal Container -->
+    <div id="custom-tooltip"></div>
+
+    <!-- Floating Add Button -->
+    <button class="floating-add-btn" onclick="app.openItemModal()" title="Add Food Spot">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+    </button>
+
+    <!-- Application Script -->
+    <script>
+        const HEALTHY_FOODS = [
+            {
+                category: "Meat",
+                foods: [
+                    { name: "Beef, Pork, Lamb, Goat, Liver/Hearts", unit: "oz", proteinPerUnit: 7.25, step: 1 },
+                    { name: "Chicken, Duck", unit: "oz", proteinPerUnit: 7.7, step: 1 },
+                    { name: "Eggs (Duck, Quail)", unit: "egg", proteinPerUnit: 6.5, step: 1 },
+                    { name: "Bacon", unit: "slice", proteinPerUnit: 3, step: 1 },
+                    { name: "Breakfast Sausage", unit: "link", proteinPerUnit: 5, step: 1 }
+                ]
+            },
+            {
+                category: "Seafood",
+                foods: [
+                    { name: "Salmon, Trout, Shrimp, Sea Bass, Crawfish", unit: "oz", proteinPerUnit: 6.5, step: 1 },
+                    { name: "Tuna, Halibut, Lobster, Crab, Pacific Cod", unit: "oz", proteinPerUnit: 7.5, step: 1 },
+                    { name: "Scallops, Clams, Mussels", unit: "oz", proteinPerUnit: 5.25, step: 1 },
+                    { name: "Oyster", unit: "pc", proteinPerUnit: 2, step: 1 },
+                    { name: "Canned Sardine/Tuna", unit: "can", proteinPerUnit: 25, step: 1 }
+                ]
+            },
+            {
+                category: "Dairy",
+                foods: [
+                    { name: "Cheese (Cheddar, Mozzarella, Cottage)", unit: "oz", proteinPerUnit: 7.25, step: 1 },
+                    { name: "Greek Yogurt", unit: "cup", proteinPerUnit: 17, step: 0.5 },
+                    { name: "Butter", unit: "tbsp", proteinPerUnit: 0.1, step: 1 }
+                ]
+            },
+            {
+                category: "Fruits",
+                foods: [
+                    { name: "Blueberries, Strawberries, Raspberries, Lemons, Limes", unit: "cup/whole", proteinPerUnit: 1.1, step: 0.5 },
+                    { name: "Blackberries", unit: "cup", proteinPerUnit: 2.0, step: 0.5 },
+                    { name: "Avocados", unit: "whole", proteinPerUnit: 4.0, step: 0.5 }
+                ]
+            },
+            {
+                category: "Nuts",
+                foods: [
+                    { name: "Pecans, Macadamia Nuts", unit: "oz", proteinPerUnit: 2.4, step: 1 },
+                    { name: "Pine Nuts", unit: "oz", proteinPerUnit: 3.9, step: 1 },
+                    { name: "Pumpkin Seeds", unit: "oz", proteinPerUnit: 9.0, step: 1 }
+                ]
+            },
+            {
+                category: "Misc",
+                foods: [
+                    { name: "Porkrinds", unit: "oz", proteinPerUnit: 17.0, step: 1 },
+                    { name: "Bone Broth", unit: "cup", proteinPerUnit: 9.0, step: 1 },
+                    { name: "Hero White Bread", unit: "slice", proteinPerUnit: 5.0, step: 1 },
+                    { name: "Gelatin Jello", unit: "cup", proteinPerUnit: 1.6, step: 1 }
+                ]
+            }
+        ];
+
+        const SEED_CATEGORIES = [
+            { id: "cat-cheese", name: "Cheese", description: "" },
+            { id: "cat-dimsum", name: "Dim Sum", description: "" },
+            { id: "cat-boba", name: "Boba", description: "" },
+            { id: "cat-noodles", name: "Noodles", description: "" },
+            { id: "cat-sspork", name: "Sweet Sour Pork", description: "" },
+            { id: "cat-filipino", name: "Filipino", description: "" },
+            { id: "cat-sushi", name: "Sushi", description: "" },
+            { id: "cat-chowfungravy", name: "Chow Fun (Gravy)", description: "" },
+            { id: "cat-chowfunnogravy", name: "Chow Fun (No Gravy)", description: "" },
+            { id: "cat-walnutprawns", name: "Walnut Prawns", description: "" },
+            { id: "cat-pizza", name: "Pizza", description: "" },
+            { id: "cat-friedrice", name: "Fried Rice", description: "" },
+            { id: "cat-friedchicken", name: "Fried Chicken", description: "" },
+            { id: "cat-pho", name: "Pho", description: "" },
+            { id: "cat-chowmein", name: "Chow Mein", description: "" },
+            { id: "cat-bacon", name: "Bacon", description: "" },
+            { id: "cat-steak", name: "Steak", description: "" }
+        ];
+
+        const SEED_ITEMS = [
+            // Cheese
+            { id: "item-1", name: "Double Creamy Gouda", categoryId: "cat-cheese", rating: "good", notes: "" },
+            { id: "item-2", name: "Trader Joe Double Cream", categoryId: "cat-cheese", rating: "good", notes: "" },
+            { id: "item-3", name: "Blueberry Vanilla Chevre", categoryId: "cat-cheese", rating: "good", notes: "" },
+            { id: "item-4", name: "Blueberry Cheese", categoryId: "cat-cheese", rating: "bad", notes: "" },
+            { id: "item-5", name: "Mt Tam Triple Cream Bloomy", categoryId: "cat-cheese", rating: "bad", notes: "" },
+
+            // Dim Sum
+            { id: "item-6", name: "King Eggroll", categoryId: "cat-dimsum", rating: "good", notes: "" },
+            { id: "item-7", name: "Dum Sum King?", categoryId: "cat-dimsum", rating: "good", notes: "" },
+            { id: "item-8", name: "Fu Lam Mum", categoryId: "cat-dimsum", rating: "good", notes: "" },
+            { id: "item-9", name: "Yue Huang", categoryId: "cat-dimsum", rating: "good", notes: "" },
+
+            // Boba
+            { id: "item-10", name: "HeyTea", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-11", name: "Sunright", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-12", name: "7 Leaves", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-13", name: "Shuyi", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-14", name: "Rose Tea Lounge", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-15", name: "Pearls", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-16", name: "Boba Unit", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-17", name: "Saigon Kitchen (Cofe)", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-18", name: "Tea 18", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-19", name: "Coco Cane", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-20", name: "Zero&", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-21", name: "Pho Ru", categoryId: "cat-boba", rating: "good", notes: "" },
+            { id: "item-22", name: "Aimee's Boba Cafe", categoryId: "cat-boba", rating: "okay", notes: "" },
+            { id: "item-23", name: "Fantasia", categoryId: "cat-boba", rating: "bad", notes: "" },
+            { id: "item-24", name: "Coco", categoryId: "cat-boba", rating: "bad", notes: "" },
+            { id: "item-25", name: "Boba Story", categoryId: "cat-boba", rating: "bad", notes: "" },
+            { id: "item-26", name: "Lumpia KO", categoryId: "cat-boba", rating: "bad", notes: "" },
+            { id: "item-27", name: "One Zo", categoryId: "cat-boba", rating: "bad", notes: "" },
+
+            // Noodles
+            { id: "item-28", name: "Highland Noodle", categoryId: "cat-noodles", rating: "bad", notes: "" },
+
+            // Sweet Sour Pork
+            { id: "item-29", name: "Fu Lam Mum", categoryId: "cat-sspork", rating: "good", notes: "" },
+            { id: "item-30", name: "Ming Dynasty", categoryId: "cat-sspork", rating: "good", notes: "" },
+            { id: "item-31", name: "Lucky Wok", categoryId: "cat-sspork", rating: "good", notes: "" },
+            { id: "item-32", name: "Ming Palace", categoryId: "cat-sspork", rating: "okay", notes: "" },
+            { id: "item-33", name: "Yue Huang", categoryId: "cat-sspork", rating: "okay", notes: "" },
+            { id: "item-34", name: "Hot Wok", categoryId: "cat-sspork", rating: "bad", notes: "" },
+
+            // Filipino
+            { id: "item-35", name: "Lumpia Ko", categoryId: "cat-filipino", rating: "okay", notes: "" },
+            { id: "item-36", name: "South Villa", categoryId: "cat-filipino", rating: "okay", notes: "" },
+
+            // Sushi
+            { id: "item-37", name: "Enjoy Seoul", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-38", name: "Sen Dai", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-39", name: "Kenzo", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-40", name: "Azuma", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-41", name: "Omakase", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-42", name: "Kura Revolving Sushi", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-43", name: "Cha Cha", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-44", name: "Sushi o Sushi", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-45", name: "Rol Hand Roll Bar (SoCal)", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-46", name: "Leichi", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-47", name: "Lucky 7 by Sushi Yo!", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-48", name: "Fuji Sushi", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-49", name: "Jimmy's Place Kitchen", categoryId: "cat-sushi", rating: "good", notes: "" },
+            { id: "item-50", name: "Yoshi Sushi", categoryId: "cat-sushi", rating: "bad", notes: "" },
+            { id: "item-51", name: "Kobe", categoryId: "cat-sushi", rating: "bad", notes: "" },
+            { id: "item-52", name: "Pier 50", categoryId: "cat-sushi", rating: "bad", notes: "" },
+            { id: "item-53", name: "Sushi Kawa", categoryId: "cat-sushi", rating: "bad", notes: "" },
+            { id: "item-54", name: "Wasabi, Cucumber", categoryId: "cat-sushi", rating: "bad", notes: "" },
+            { id: "item-55", name: "Spicy Tuna/Crab", categoryId: "cat-sushi", rating: "bad", notes: "" },
+            { id: "item-56", name: "Cream Cheese", categoryId: "cat-sushi", rating: "bad", notes: "" },
+            { id: "item-57", name: "Its Sushi", categoryId: "cat-sushi", rating: "bad", notes: "" },
+
+            // Chow Fun (Gravy)
+            { id: "item-58", name: "Rong Biển", categoryId: "cat-chowfungravy", rating: "good", notes: "" },
+            { id: "item-59", name: "Dynasty", categoryId: "cat-chowfungravy", rating: "good", notes: "" },
+            { id: "item-60", name: "TK Noodle (William St. SJ)", categoryId: "cat-chowfungravy", rating: "good", notes: "" },
+            { id: "item-61", name: "Ming Palace", categoryId: "cat-chowfungravy", rating: "okay", notes: "" },
+            { id: "item-62", name: "Ming Dynasty", categoryId: "cat-chowfungravy", rating: "okay", notes: "" },
+            { id: "item-63", name: "Lucky Wok", categoryId: "cat-chowfungravy", rating: "okay", notes: "" },
+            { id: "item-64", name: "Pho 21", categoryId: "cat-chowfungravy", rating: "bad", notes: "" },
+            { id: "item-65", name: "Ume", categoryId: "cat-chowfungravy", rating: "bad", notes: "" },
+            { id: "item-66", name: "Lee's Kitchen", categoryId: "cat-chowfungravy", rating: "bad", notes: "" },
+            { id: "item-67", name: "Jade China", categoryId: "cat-chowfungravy", rating: "bad", notes: "" },
+            { id: "item-68", name: "Soong Soong", categoryId: "cat-chowfungravy", rating: "bad", notes: "" },
+            { id: "item-69", name: "Fu Lam Mum", categoryId: "cat-chowfungravy", rating: "bad", notes: "" },
+            { id: "item-70", name: "Pho City", categoryId: "cat-chowfungravy", rating: "bad", notes: "" },
+
+            // Chow Fun (No Gravy)
+            { id: "item-71", name: "Pearl River", categoryId: "cat-chowfunnogravy", rating: "good", notes: "" },
+
+            // Walnut Prawns
+            { id: "item-72", name: "Dynasty", categoryId: "cat-walnutprawns", rating: "good", notes: "" },
+            { id: "item-73", name: "Panda Express", categoryId: "cat-walnutprawns", rating: "good", notes: "" },
+            { id: "item-74", name: "Beijing Restaurant", categoryId: "cat-walnutprawns", rating: "good", notes: "" },
+            { id: "item-75", name: "Rong Bien", categoryId: "cat-walnutprawns", rating: "good", notes: "" },
+            { id: "item-76", name: "Soong Soong", categoryId: "cat-walnutprawns", rating: "good", notes: "" },
+            { id: "item-77", name: "Yue Huang", categoryId: "cat-walnutprawns", rating: "good", notes: "" },
+            { id: "item-78", name: "Koi Palace?", categoryId: "cat-walnutprawns", rating: "good", notes: "" },
+            { id: "item-79", name: "Lucky Wok", categoryId: "cat-walnutprawns", rating: "okay", notes: "" },
+            { id: "item-80", name: "Ume", categoryId: "cat-walnutprawns", rating: "bad", notes: "" },
+            { id: "item-81", name: "Fu Lam Mum", categoryId: "cat-walnutprawns", rating: "bad", notes: "" },
+            { id: "item-82", name: "Pearl River?", categoryId: "cat-walnutprawns", rating: "bad", notes: "" },
+            { id: "item-83", name: "Ming Palace", categoryId: "cat-walnutprawns", rating: "bad", notes: "" },
+            { id: "item-84", name: "Ming Dynasty", categoryId: "cat-walnutprawns", rating: "bad", notes: "" },
+
+            // Pizza
+            { id: "item-85", name: "Pizza Hut(Pan)", categoryId: "cat-pizza", rating: "good", notes: "" },
+            { id: "item-86", name: "Blaze", categoryId: "cat-pizza", rating: "good", notes: "" },
+            { id: "item-87", name: "Mod", categoryId: "cat-pizza", rating: "good", notes: "" },
+            { id: "item-88", name: "Costco", categoryId: "cat-pizza", rating: "good", notes: "" },
+            { id: "item-89", name: "Mountain Mikes", categoryId: "cat-pizza", rating: "good", notes: "" },
+            { id: "item-90", name: "Pizza My Heart", categoryId: "cat-pizza", rating: "good", notes: "" },
+            { id: "item-91", name: "Slice House (Deep + F)", categoryId: "cat-pizza", rating: "good", notes: "" },
+            { id: "item-92", name: "Delish Pizza", categoryId: "cat-pizza", rating: "good", notes: "" },
+            { id: "item-93", name: "Straw Hat", categoryId: "cat-pizza", rating: "bad", notes: "" },
+            { id: "item-94", name: "Patxi", categoryId: "cat-pizza", rating: "bad", notes: "" },
+            { id: "item-95", name: "Dominos", categoryId: "cat-pizza", rating: "bad", notes: "" },
+            { id: "item-96", name: "Grimaldi's", categoryId: "cat-pizza", rating: "bad", notes: "" },
+            { id: "item-97", name: "Me-n-Ed's", categoryId: "cat-pizza", rating: "bad", notes: "" },
+            { id: "item-98", name: "Pizza Guys", categoryId: "cat-pizza", rating: "bad", notes: "" },
+            { id: "item-99", name: "Papa Murphys", categoryId: "cat-pizza", rating: "bad", notes: "" },
+            { id: "item-100", name: "Boudin", categoryId: "cat-pizza", rating: "bad", notes: "" },
+
+            // Fried Rice
+            { id: "item-101", name: "Pearl River", categoryId: "cat-friedrice", rating: "good", notes: "" },
+            { id: "item-102", name: "Din Tai Fung", categoryId: "cat-friedrice", rating: "good", notes: "" },
+            { id: "item-103", name: "Fu Lam Mum", categoryId: "cat-friedrice", rating: "good", notes: "" },
+            { id: "item-104", name: "Tay Ho", categoryId: "cat-friedrice", rating: "good", notes: "" },
+            { id: "item-105", name: "Ume?", categoryId: "cat-friedrice", rating: "good", notes: "" },
+            { id: "item-106", name: "Ming Palace", categoryId: "cat-friedrice", rating: "okay", notes: "" },
+            { id: "item-107", name: "Pho City", categoryId: "cat-friedrice", rating: "okay", notes: "" },
+            { id: "item-108", name: "Yue Huang", categoryId: "cat-friedrice", rating: "okay", notes: "" },
+            { id: "item-109", name: "Lee's Kitchen", categoryId: "cat-friedrice", rating: "bad", notes: "" },
+            { id: "item-110", name: "China Stix", categoryId: "cat-friedrice", rating: "bad", notes: "" },
+            { id: "item-111", name: "Soong Soong", categoryId: "cat-friedrice", rating: "bad", notes: "" },
+            { id: "item-112", name: "Jade China?", categoryId: "cat-friedrice", rating: "bad", notes: "" },
+            { id: "item-113", name: "Hot Wok", categoryId: "cat-friedrice", rating: "bad", notes: "" },
+            { id: "item-114", name: "Lucky Wok", categoryId: "cat-friedrice", rating: "bad", notes: "" },
+
+            // Fried Chicken
+            { id: "item-115", name: "Church's Chicken", categoryId: "cat-friedchicken", rating: "good", notes: "" },
+            { id: "item-116", name: "Golden Chick", categoryId: "cat-friedchicken", rating: "good", notes: "" },
+            { id: "item-117", name: "99 Chicken", categoryId: "cat-friedchicken", rating: "good", notes: "" },
+            { id: "item-118", name: "Jolibee", categoryId: "cat-friedchicken", rating: "good", notes: "" },
+            { id: "item-119", name: "King Eggroll", categoryId: "cat-friedchicken", rating: "good", notes: "" },
+            { id: "item-120", name: "Chimek", categoryId: "cat-friedchicken", rating: "bad", notes: "" },
+            { id: "item-121", name: "Modak", categoryId: "cat-friedchicken", rating: "bad", notes: "" },
+
+            // Pho
+            { id: "item-122", name: "Pho Ha Noi", categoryId: "cat-pho", rating: "good", notes: "" },
+            { id: "item-123", name: "Pho Mai", categoryId: "cat-pho", rating: "good", notes: "" },
+            { id: "item-124", name: "Tay Ho", categoryId: "cat-pho", rating: "good", notes: "" },
+            { id: "item-125", name: "Sup Noodle (SoCal)", categoryId: "cat-pho", rating: "good", notes: "" },
+            { id: "item-126", name: "Saigon Kitchen", categoryId: "cat-pho", rating: "good", notes: "" },
+            { id: "item-127", name: "Pho City", categoryId: "cat-pho", rating: "good", notes: "" },
+            { id: "item-128", name: "Pho Ru", categoryId: "cat-pho", rating: "good", notes: "" },
+            { id: "item-129", name: "Pho Duoi Bo", categoryId: "cat-pho", rating: "okay", notes: "" },
+            { id: "item-130", name: "Pho Hoa", categoryId: "cat-pho", rating: "bad", notes: "" },
+            { id: "item-131", name: "Pho #1", categoryId: "cat-pho", rating: "bad", notes: "" },
+            { id: "item-132", name: "Pho 90°", categoryId: "cat-pho", rating: "bad", notes: "" },
+            { id: "item-133", name: "Fulton Pho", categoryId: "cat-pho", rating: "bad", notes: "" },
+            { id: "item-134", name: "Me's Kitchen?", categoryId: "cat-pho", rating: "bad", notes: "" },
+
+            // Chow Mein
+            { id: "item-135", name: "Yue Huang", categoryId: "cat-chowmein", rating: "good", notes: "Skinny" },
+            { id: "item-136", name: "Yue Huang", categoryId: "cat-chowmein", rating: "bad", notes: "" },
+
+            // Steak
+            { id: "item-137", name: "House Prime Rib", categoryId: "cat-steak", rating: "good", notes: "" },
+            { id: "item-138", name: "Peter Luger", categoryId: "cat-steak", rating: "good", notes: "" },
+            { id: "item-139", name: "Cattlemens", categoryId: "cat-steak", rating: "good", notes: "" }
+        ];
+
+        class GourmetLedger {
+            constructor() {
+                this.categories = [];
+                this.items = [];
+                this.activeCategoryId = "";
+                this.searchQuery = "";
+                this.viewMode = "kanban";
+                this.modalSelectedRating = "good";
+                this.currentSection = "ledger";
+                this.healthSelected = {}; // Key: "catIndex-foodName", Value: true/false
+
+                this.init();
+            }
+
+            init() {
+                const savedTheme = localStorage.getItem("gl-theme") || "light";
+                document.documentElement.setAttribute("data-theme", savedTheme);
+                this.updateThemeButtonIcon(savedTheme);
+
+                const cachedCategories = localStorage.getItem("gl-categories");
+                const cachedItems = localStorage.getItem("gl-items");
+
+                if (cachedCategories && cachedItems) {
+                    this.categories = JSON.parse(cachedCategories);
+                    this.items = JSON.parse(cachedItems);
+                } else {
+                    this.categories = SEED_CATEGORIES;
+                    this.items = SEED_ITEMS;
+                    this.saveToStorage();
+                }
+
+                const sortedCategories = [...this.categories].sort((a, b) => a.name.localeCompare(b.name));
+                if (!this.activeCategoryId || (this.activeCategoryId !== 'all' && !this.categories.some(c => c.id === this.activeCategoryId))) {
+                    this.activeCategoryId = "all";
+                }
+
+                const cachedHealth = localStorage.getItem("gl-health-selected");
+                this.healthSelected = cachedHealth ? JSON.parse(cachedHealth) : {};
+
+                this.renderCategories();
+                this.renderActiveCategoryInfo();
+                this.renderItems();
+                this.populateCategoryDropdown();
+            }
+
+            saveToStorage() {
+                localStorage.setItem("gl-categories", JSON.stringify(this.categories));
+                localStorage.setItem("gl-items", JSON.stringify(this.items));
+            }
+
+            toggleTheme() {
+                const currentTheme = document.documentElement.getAttribute("data-theme");
+                const newTheme = currentTheme === "dark" ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", newTheme);
+                localStorage.setItem("gl-theme", newTheme);
+                this.updateThemeButtonIcon(newTheme);
+            }
+
+            updateThemeButtonIcon(theme) {
+                const btn = document.getElementById("theme-toggle");
+                if (theme === "dark") {
+                    btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"></path></svg>`;
+                } else {
+                    btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"></path></svg>`;
+                }
+            }
+
+            renderCategories() {
+                const container = document.getElementById("category-list-container");
+                let html = `
+                    <div class="category-item ${this.activeCategoryId === 'all' && this.currentSection === 'ledger' ? 'active' : ''}" 
+                         data-id="all"
+                         onclick="app.setActiveCategory('all')"
+                         onmouseover="app.setActiveCategory('all')">
+                        <span>All Categories</span>
+                        <div class="category-meta">
+                            <span class="category-count">${this.items.length}</span>
+                        </div>
+                    </div>
+                `;
+
+                const sortedCategories = [...this.categories].sort((a, b) => a.name.localeCompare(b.name));
+
+                sortedCategories.forEach(cat => {
+                    const count = this.items.filter(item => item.categoryId === cat.id).length;
+                    const isActive = this.activeCategoryId === cat.id && this.currentSection === 'ledger';
+
+                    html += `
+                        <div class="category-item ${isActive ? 'active' : ''}" 
+                             data-id="${cat.id}"
+                             onclick="app.setActiveCategory('${cat.id}')"
+                             onmouseover="app.setActiveCategory('${cat.id}')">
+                            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cat.name}</span>
+                            <div class="category-meta">
+                                <span class="category-count">${count}</span>
+                                <span class="category-actions-trigger" onclick="event.stopPropagation(); app.openCategoryModal('${cat.id}')">
+                                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"></path></svg>
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            }
+
+            setActiveCategory(catId) {
+                this.currentSection = "ledger";
+                
+                const tab = document.getElementById("tab-health-guide");
+                if (tab) {
+                    tab.classList.remove("active");
+                    tab.style.backgroundColor = "rgba(2, 132, 199, 0.06)";
+                    tab.style.borderColor = "rgba(2, 132, 199, 0.15)";
+                }
+
+                const viewControls = document.querySelector('.view-controls');
+                if (viewControls) viewControls.style.display = "flex";
+
+                const floatingAddBtn = document.querySelector('.floating-add-btn');
+                if (floatingAddBtn) floatingAddBtn.style.display = "flex";
+
+                document.getElementById("health-view").style.display = "none";
+
+                if (this.activeCategoryId === catId) {
+                    const items = document.querySelectorAll("#category-list-container .category-item");
+                    items.forEach(item => {
+                        item.classList.toggle("active", item.getAttribute("data-id") === catId);
+                    });
+                    this.renderActiveCategoryInfo();
+                    this.renderItems();
+                    return;
+                }
+                this.activeCategoryId = catId;
+                
+                // Clear search if switched category
+                this.searchQuery = "";
+                const searchInput = document.getElementById("global-search");
+                if (searchInput) searchInput.value = "";
+
+                const items = document.querySelectorAll("#category-list-container .category-item");
+                items.forEach(item => {
+                    item.classList.toggle("active", item.getAttribute("data-id") === catId);
+                });
+                this.renderActiveCategoryInfo();
+                this.renderItems();
+            }
+
+            setSection(sectionName) {
+                this.currentSection = sectionName;
+                if (sectionName === "health") {
+                    this.activeCategoryId = "";
+                    
+                    const tab = document.getElementById("tab-health-guide");
+                    if (tab) {
+                        tab.classList.add("active");
+                        tab.style.backgroundColor = "rgba(2, 132, 199, 0.15)";
+                        tab.style.borderColor = "rgba(2, 132, 199, 0.3)";
+                    }
+
+                    this.renderCategories();
+                    document.getElementById("active-category-title").innerText = "🥗 Healthy Foods";
+
+                    document.getElementById("kanban-view").style.display = "none";
+                    document.getElementById("grid-view").style.display = "none";
+                    document.getElementById("health-view").style.display = "block";
+
+                    const searchCont = document.querySelector('.search-container');
+                    if (searchCont) searchCont.style.display = "none";
+
+                    const viewControls = document.querySelector('.view-controls');
+                    if (viewControls) viewControls.style.display = "none";
+
+                    const floatingAddBtn = document.querySelector('.floating-add-btn');
+                    if (floatingAddBtn) floatingAddBtn.style.display = "none";
+
+                    this.renderHealthyFoods();
+                    this.updateHealthCalculator();
+                }
+            }
+
+            renderActiveCategoryInfo() {
+                const titleEl = document.getElementById("active-category-title");
+                if (this.activeCategoryId === "all") {
+                    titleEl.innerText = "All Categories";
+                } else {
+                    const cat = this.categories.find(c => c.id === this.activeCategoryId);
+                    titleEl.innerText = cat ? cat.name : "Select Category";
+                }
+            }
+
+            getFilteredItems() {
+                let filtered = [...this.items];
+
+                if (this.activeCategoryId !== "all" && this.activeCategoryId !== "") {
+                    filtered = filtered.filter(item => item.categoryId === this.activeCategoryId);
+                }
+
+                if (this.searchQuery.trim() !== "") {
+                    const q = this.searchQuery.toLowerCase();
+                    filtered = filtered.filter(item => 
+                        item.name.toLowerCase().includes(q) || 
+                        (item.notes && item.notes.toLowerCase().includes(q))
+                    );
+                }
+
+                return filtered;
+            }
+
+            renderItems() {
+                // Search bar only shows when "All Categories" is selected and section is ledger
+                const searchContainer = document.querySelector('.search-container');
+                if (searchContainer) {
+                    searchContainer.style.display = (this.activeCategoryId === 'all' && this.currentSection === 'ledger') ? 'block' : 'none';
+                }
+
+                if (this.currentSection === "health") return;
+
+                const filtered = this.getFilteredItems();
+
+                if (this.viewMode === "kanban") {
+                    document.getElementById("kanban-view").style.display = "flex";
+                    document.getElementById("grid-view").style.display = "none";
+                    this.renderKanbanView(filtered);
+                } else {
+                    document.getElementById("kanban-view").style.display = "none";
+                    document.getElementById("grid-view").style.display = "grid";
+                    this.renderGridView(filtered);
+                }
+            }
+
+            renderKanbanView(items) {
+                const goodList = document.getElementById("kanban-good-list");
+                const okayList = document.getElementById("kanban-okay-list");
+                const badList = document.getElementById("kanban-bad-list");
+
+                const goodItems = items.filter(i => i.rating === "good");
+                const okayItems = items.filter(i => i.rating === "okay");
+                const badItems = items.filter(i => i.rating === "bad");
+
+                document.getElementById("kanban-good-count").innerText = goodItems.length;
+                document.getElementById("kanban-okay-count").innerText = okayItems.length;
+                document.getElementById("kanban-bad-count").innerText = badItems.length;
+
+                goodList.innerHTML = this.generateItemCardsHtml(goodItems);
+                okayList.innerHTML = this.generateItemCardsHtml(okayItems);
+                badList.innerHTML = this.generateItemCardsHtml(badItems);
+
+                // Dynamically hide/show columns if empty
+                document.getElementById("column-good").style.display = goodItems.length > 0 ? "flex" : "none";
+                document.getElementById("column-okay").style.display = okayItems.length > 0 ? "flex" : "none";
+                document.getElementById("column-bad").style.display = badItems.length > 0 ? "flex" : "none";
+            }
+
+            renderGridView(items) {
+                const grid = document.getElementById("grid-view");
+                grid.innerHTML = this.generateItemCardsHtml(items, true);
+            }
+
+            pickRandomFood(rating) {
+                // Cancel any previous glow timer so user can reroll immediately
+                if (this._glowTimer) {
+                    clearTimeout(this._glowTimer);
+                    this._glowTimer = null;
+                }
+                // Cancel any running spin animation
+                if (this._spinTimer) {
+                    clearTimeout(this._spinTimer);
+                    this._spinTimer = null;
+                }
+                // Clear any previous glow on all cards
+                document.querySelectorAll('.food-card').forEach(c => {
+                    c.style.transform = '';
+                    c.style.outline = '';
+                    c.style.boxShadow = '';
+                });
+
+                const filtered = this.getFilteredItems();
+                const pool = filtered.filter(item => item.rating === rating);
+                if (pool.length === 0) {
+                    alert(`No items rated "${rating.toUpperCase()}" in this category to pick from.`);
+                    return;
+                }
+
+                // If viewMode is kanban, do the visual wheel of fortune animation on cards
+                if (this.viewMode === "kanban") {
+                    const columnId = `column-${rating}`;
+                    const cards = document.querySelectorAll(`#${columnId} .food-card`);
+                    if (cards.length > 0) {
+                        const selected = pool[Math.floor(Math.random() * pool.length)];
+                        
+                        // Adaptive speed: cap total ticks and use tiny delays for long lists
+                        const totalTicks = Math.min(cards.length + 6, 20); // never more than 20 ticks
+                        const baseDelay = cards.length > 15 ? 5 : 15;
+                        const decel = Math.max(1, Math.floor(40 / totalTicks)); // adaptive deceleration
+                        let index = 0;
+                        let delay = baseDelay;
+                        let step = 0;
+
+                        const tick = () => {
+                            cards.forEach(c => {
+                                c.style.transform = '';
+                                c.style.outline = '';
+                                c.style.boxShadow = '';
+                            });
+
+                            const currentCard = cards[index % cards.length];
+                            currentCard.style.transform = 'scale(1.04) translateY(-1px)';
+                            currentCard.style.outline = '2px dashed var(--brand)';
+                            currentCard.style.boxShadow = 'var(--shadow-subtle)';
+
+                            index++;
+                            step++;
+
+                            if (step < totalTicks) {
+                                delay += decel;
+                                this._spinTimer = setTimeout(tick, delay);
+                            } else {
+                                this._spinTimer = null;
+                                cards.forEach(c => {
+                                    c.style.transform = '';
+                                    c.style.outline = '';
+                                    c.style.boxShadow = '';
+                                });
+
+                                const winnerCard = Array.from(cards).find(c => c.innerHTML.includes(selected.name));
+                                if (winnerCard) {
+                                    winnerCard.style.transform = 'scale(1.06) translateY(-2px)';
+                                    winnerCard.style.outline = '3px solid #10b981';
+                                    winnerCard.style.boxShadow = '0 0 24px rgba(16, 185, 129, 0.65)';
+                                    
+                                    // Smoothly scroll the card into view
+                                    winnerCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                    
+                                    this._glowTimer = setTimeout(() => {
+                                        winnerCard.style.transform = '';
+                                        winnerCard.style.outline = '';
+                                        winnerCard.style.boxShadow = '';
+                                        this._glowTimer = null;
+                                    }, 3000);
+                                }
+                            }
+                        };
+                        tick();
+                        return;
+                    }
+                }
+
+                // Fallback if cards aren't ready
+                const selected = pool[Math.floor(Math.random() * pool.length)];
+                alert(`🎲 Gourmet Decider: We picked "${selected.name}"!`);
+            }
+
+            renderHealthyFoods() {
+                const grid = document.getElementById("health-categories-grid");
+                let html = "";
+                
+                HEALTHY_FOODS.forEach((cat, catIndex) => {
+                    const foodRows = cat.foods.map((food, foodIndex) => {
+                        const key = `${catIndex}-${foodIndex}`;
+                        const qty = this.healthSelected[key] || 0;
+                        const hasQty = qty > 0;
+                        
+                        const rowStyle = hasQty 
+                            ? "background-color: rgba(59, 130, 246, 0.06); border-left: 3px solid #3b82f6; border-bottom: 1px solid transparent; box-shadow: 0 0 12px rgba(59, 130, 246, 0.12); border-radius: 0 4px 4px 0; padding: 6px 8px; margin: 2px 0; display: flex; justify-content: space-between; align-items: center; transition: var(--transition);" 
+                            : "background-color: transparent; border-left: 3px solid transparent; border-bottom: 1px solid rgba(228, 228, 231, 0.4); padding: 6px 8px; margin: 2px 0; display: flex; justify-content: space-between; align-items: center; transition: var(--transition);";
+                        
+                        return `
+                            <div style="${rowStyle}">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 12px; font-weight: 500; color: var(--text-main);">${food.name}</div>
+                                    <div style="font-size: 10px; color: var(--text-sub); margin-top: 1px;">${Math.round(food.proteinPerUnit)}g protein</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <button type="button" onclick="app.updateHealthQty(${catIndex}, ${foodIndex}, -1)" 
+                                            style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-sub); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: var(--transition); line-height: 1; visibility: ${hasQty ? 'visible' : 'hidden'};">-</button>
+                                    <span style="font-size: 11px; font-weight: 700; min-width: 44px; text-align: center; color: var(--text-main); font-family: 'Outfit', sans-serif;">${qty} ${food.unit}</span>
+                                    <button type="button" onclick="app.updateHealthQty(${catIndex}, ${foodIndex}, 1)" 
+                                            style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-sub); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: var(--transition); line-height: 1;">+</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+                    
+                    html += `
+                        <div style="background-color: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-ui); padding: 18px 20px; box-shadow: var(--shadow-subtle); display: flex; flex-direction: column; gap: 10px;">
+                            <div style="border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 4px;">
+                                <h4 style="font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: var(--text-main); letter-spacing: 0.02em;">${cat.category}</h4>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                ${foodRows}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                grid.innerHTML = html;
+            }
+
+            updateHealthQty(catIndex, foodIndex, direction) {
+                const key = `${catIndex}-${foodIndex}`;
+                const food = HEALTHY_FOODS[catIndex].foods[foodIndex];
+                let current = this.healthSelected[key] || 0;
+                
+                current += direction * food.step;
+                if (current < 0) current = 0;
+                
+                current = Math.round(current * 100) / 100;
+                
+                if (current === 0) {
+                    delete this.healthSelected[key];
+                } else {
+                    this.healthSelected[key] = current;
+                }
+                
+                localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
+                this.renderHealthyFoods();
+                this.updateHealthCalculator();
+            }
+
+            updateHealthCalculator() {
+                let totalProtein = 0;
+                
+                for (const key in this.healthSelected) {
+                    const [catIndex, foodIndex] = key.split("-").map(Number);
+                    const qty = this.healthSelected[key];
+                    const food = HEALTHY_FOODS[catIndex].foods[foodIndex];
+                    totalProtein += qty * food.proteinPerUnit;
+                }
+                
+                document.getElementById("health-calc-protein").innerText = `${Math.round(totalProtein)}g`;
+            }
+
+            clearHealthCalc() {
+                this.healthSelected = {};
+                localStorage.removeItem("gl-health-selected");
+                this.renderHealthyFoods();
+                this.updateHealthCalculator();
+            }
+
+            generateItemCardsHtml(items) {
+                if (items.length === 0) {
+                    return `
+                        <div class="empty-state">
+                            <span class="empty-state-icon">🍽️</span>
+                            <h3>No items</h3>
+                        </div>
+                    `;
+                }
+
+                return items.map(item => {
+                    const ratingClass = item.rating;
+                    const cat = this.categories.find(c => c.id === item.categoryId);
+                    const catName = cat ? cat.name : "Uncategorized";
+
+                    const categoryBadge = this.activeCategoryId === 'all'
+                        ? `<span class="card-category-tag" style="margin-left: 6px; font-size: 9px; padding: 1.5px 5px; background: rgba(0,0,0,0.25); color: #ffffff; border-radius: 3px; font-weight: 600; vertical-align: middle; display: inline-block;">${catName}</span>`
+                        : '';
+
+                    const locationLabel = item.location
+                        ? `<span class="card-location" style="font-size: 9px; opacity: 0.85; display: inline-flex; align-items: center; gap: 2px;">📍 ${item.location}</span>`
+                        : '';
+
+                    return `
+                        <div class="food-card ${ratingClass}" onclick="app.openItemModal('${item.id}')" onmouseenter="app.showTooltip(event, '${item.id}')" onmouseleave="app.hideTooltip()" onmousemove="app.moveTooltip(event)">
+                            <div class="card-header">
+                                <h4 class="card-title">${item.name}${categoryBadge}</h4>
+                            </div>
+                            ${locationLabel ? `<div style="margin-bottom: 2px; display: flex; align-items: center;">${locationLabel}</div>` : ""}
+                            ${item.notes ? `<p class="card-notes">${item.notes}</p>` : ""}
+                            <div class="card-meta">
+                                <div class="card-actions">
+                                    <button class="card-action-btn" onclick="event.stopPropagation(); app.deleteItem('${item.id}')" title="Delete Item">
+                                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            }
+
+            setViewMode(mode) {
+                this.viewMode = mode;
+                document.getElementById("view-kanban-btn").classList.toggle("active", mode === "kanban");
+                document.getElementById("view-grid-btn").classList.toggle("active", mode === "grid");
+                this.renderItems();
+            }
+
+            showTooltip(event, itemId) {
+                const item = this.items.find(i => i.id === itemId);
+                if (!item) return;
+                const cat = this.categories.find(c => c.id === item.categoryId);
+                const catName = cat ? cat.name : "Unknown Category";
+                
+                let ratingColor = "var(--text-sub)";
+                if (item.rating === "good") ratingColor = "var(--good-dot)";
+                else if (item.rating === "okay") ratingColor = "var(--okay-dot)";
+                else if (item.rating === "bad") ratingColor = "var(--bad-dot)";
+
+                const tooltip = document.getElementById("custom-tooltip");
+                tooltip.innerHTML = `
+                    <div class="tooltip-section">${catName}</div>
+                    <div class="tooltip-rating" style="color: ${ratingColor}">
+                        <span class="column-dot" style="background-color: ${ratingColor}"></span>
+                        Rating: ${item.rating.toUpperCase()}
+                    </div>
+                    ${item.location ? `<div style="font-size: 10px; font-weight: 500; margin-bottom: 4px; color: var(--text-main);">📍 ${item.location}</div>` : ""}
+                    ${item.notes ? `<div class="tooltip-notes">${item.notes}</div>` : ''}
+                `;
+                tooltip.style.display = "block";
+                tooltip.offsetHeight;
+                tooltip.classList.add("visible");
+                this.moveTooltip(event);
+            }
+
+            moveTooltip(event) {
+                const tooltip = document.getElementById("custom-tooltip");
+                const offset = 10;
+                let x = event.clientX + offset;
+                let y = event.clientY + offset;
+
+                const winW = window.innerWidth;
+                const winH = window.innerHeight;
+                const rect = tooltip.getBoundingClientRect();
+                
+                if (x + rect.width > winW) {
+                    x = event.clientX - rect.width - offset;
+                }
+                if (y + rect.height > winH) {
+                    y = event.clientY - rect.height - offset;
+                }
+
+                tooltip.style.left = `${x}px`;
+                tooltip.style.top = `${y}px`;
+            }
+
+            hideTooltip() {
+                const tooltip = document.getElementById("custom-tooltip");
+                tooltip.classList.remove("visible");
+                tooltip.style.display = "none";
+            }
+
+            handleSearch(query) {
+                this.searchQuery = query;
+                this.renderItems();
+            }
+
+            populateCategoryDropdown() {
+                const select = document.getElementById("item-category");
+                select.innerHTML = this.categories.map(cat => `
+                    <option value="${cat.id}">${cat.name}</option>
+                `).join("");
+            }
+
+            openCategoryModal(catId = null) {
+                const modal = document.getElementById("category-modal");
+                const title = document.getElementById("category-modal-title");
+                const deleteBtn = document.getElementById("delete-category-btn");
+                
+                document.getElementById("edit-category-id").value = catId || "";
+                
+                if (catId) {
+                    const cat = this.categories.find(c => c.id === catId);
+                    document.getElementById("category-name").value = cat.name;
+                    title.innerText = "Edit Category";
+                    deleteBtn.style.display = "block";
+                } else {
+                    document.getElementById("category-name").value = "";
+                    title.innerText = "Create Category";
+                    deleteBtn.style.display = "none";
+                }
+
+                modal.classList.add("active");
+            }
+
+            closeCategoryModal() {
+                document.getElementById("category-modal").classList.remove("active");
+            }
+
+            saveCategory(event) {
+                event.preventDefault();
+                const id = document.getElementById("edit-category-id").value;
+                const name = document.getElementById("category-name").value.trim();
+
+                if (id) {
+                    const catIndex = this.categories.findIndex(c => c.id === id);
+                    if (catIndex !== -1) {
+                        this.categories[catIndex].name = name;
+                    }
+                } else {
+                    const newId = `cat-${Date.now()}`;
+                    this.categories.push({ id: newId, name, description: "" });
+                }
+
+                this.saveToStorage();
+                this.init();
+                this.closeCategoryModal();
+            }
+
+            deleteCategoryClick() {
+                const id = document.getElementById("edit-category-id").value;
+                if (!id) return;
+
+                if (confirm("Are you sure you want to delete this category? All items inside it will be deleted.")) {
+                    this.items = this.items.filter(item => item.categoryId !== id);
+                    this.categories = this.categories.filter(c => c.id !== id);
+                    this.activeCategoryId = "";
+                    this.saveToStorage();
+                    this.init();
+                    this.closeCategoryModal();
+                }
+            }
+
+            openItemModal(itemId = null) {
+                const modal = document.getElementById("item-modal");
+                const title = document.getElementById("item-modal-title");
+                
+                document.getElementById("edit-item-id").value = itemId || "";
+                
+                if (itemId) {
+                    const item = this.items.find(i => i.id === itemId);
+                    document.getElementById("item-name").value = item.name;
+                    document.getElementById("item-category").value = item.categoryId;
+                    document.getElementById("item-notes").value = item.notes || "";
+                    document.getElementById("item-location").value = item.location || "";
+                    this.selectModalRating(item.rating);
+                    title.innerText = "Edit Food Spot";
+                } else {
+                    document.getElementById("item-name").value = "";
+                    document.getElementById("item-category").value = this.activeCategoryId !== 'all' ? this.activeCategoryId : (this.categories[0]?.id || "");
+                    document.getElementById("item-notes").value = "";
+                    document.getElementById("item-location").value = "";
+                    this.selectModalRating("good");
+                    title.innerText = "Add Food Spot";
+                }
+
+                modal.classList.add("active");
+            }
+
+            closeItemModal() {
+                document.getElementById("item-modal").classList.remove("active");
+            }
+
+            selectModalRating(rating) {
+                this.modalSelectedRating = rating;
+                document.getElementById("rate-good").classList.toggle("active", rating === "good");
+                document.getElementById("rate-okay").classList.toggle("active", rating === "okay");
+                document.getElementById("rate-bad").classList.toggle("active", rating === "bad");
+            }
+
+            saveItem(event) {
+                event.preventDefault();
+                const id = document.getElementById("edit-item-id").value;
+                const name = document.getElementById("item-name").value.trim();
+                const categoryId = document.getElementById("item-category").value;
+                const notes = document.getElementById("item-notes").value.trim();
+                const location = document.getElementById("item-location").value.trim();
+                const rating = this.modalSelectedRating;
+
+                if (id) {
+                    const itemIndex = this.items.findIndex(i => i.id === id);
+                    if (itemIndex !== -1) {
+                        this.items[itemIndex] = { id, name, categoryId, notes, location, rating };
+                    }
+                } else {
+                    const newId = `item-${Date.now()}`;
+                    this.items.push({ id: newId, name, categoryId, notes, location, rating });
+                }
+
+                this.saveToStorage();
+                this.hideTooltip();
+                this.init();
+                this.closeItemModal();
+            }
+
+            deleteItem(id) {
+                if (confirm("Remove this food item?")) {
+                    this.items = this.items.filter(i => i.id !== id);
+                    this.saveToStorage();
+                    this.hideTooltip();
+                    this.init();
+                }
+            }
+
+            exportData() {
+                const data = {
+                    categories: this.categories,
+                    items: this.items,
+                    healthSelected: this.healthSelected
+                };
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `gourmet-ledger-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            importData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (parsed.categories && parsed.items) {
+                            this.categories = parsed.categories;
+                            this.items = parsed.items;
+                            if (parsed.healthSelected) {
+                                this.healthSelected = parsed.healthSelected;
+                                localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
+                            } else {
+                                this.healthSelected = {};
+                                localStorage.removeItem("gl-health-selected");
+                            }
+                            this.saveToStorage();
+                            this.init();
+                            alert("Data imported successfully!");
+                        } else {
+                            alert("Invalid backup file structure.");
+                        }
+                    } catch (err) {
+                        alert("Error parsing backup JSON file.");
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        let app;
+        window.addEventListener("DOMContentLoaded", () => {
+            app = new GourmetLedger();
+        });
+    </script>
+</body>
+</html>
