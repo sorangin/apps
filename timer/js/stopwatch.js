@@ -18,8 +18,17 @@ const Stopwatch = {
         this.render(0);
         this.updateSubBtn();
         const saved = localStorage.getItem('sw_tracking_enabled');
-        this.toggleTracking(saved === 'true');
+        if (saved === 'true') {
+            this.toggleTracking(true);
+        }
         this.updateTrackingUI(0, 0);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && this.running) {
+                this.elapsed = Date.now() - this.t0;
+                this.render(this.elapsed);
+            }
+        });
     },
 
     toggle() { if (this.running) this.stop(); else this.start(); },
@@ -29,7 +38,12 @@ const Stopwatch = {
         Background.startPersistence();
         this.running = true;
         this.t0 = Date.now() - this.elapsed;
-        const loop = () => { if (!this.running) return; this.elapsed = Date.now() - this.t0; this.render(this.elapsed); this.req = requestAnimationFrame(loop); };
+        const loop = () => {
+            if (!this.running) return;
+            this.elapsed = Date.now() - this.t0;
+            this.render(this.elapsed);
+            this.req = requestAnimationFrame(loop);
+        };
         this.req = requestAnimationFrame(loop);
         this.btnMain.innerHTML = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
         this.display.classList.add('active-accent');
@@ -38,7 +52,10 @@ const Stopwatch = {
     },
 
     stop() {
-        this.running = false; cancelAnimationFrame(this.req);
+        this.running = false;
+        if (this.req) cancelAnimationFrame(this.req);
+        this.elapsed = Date.now() - this.t0;
+        this.render(this.elapsed);
         this.btnMain.innerHTML = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
         this.display.classList.remove('active-accent');
         this.updateSubBtn();
@@ -52,6 +69,9 @@ const Stopwatch = {
     },
 
     lap() {
+        if (this.running) {
+            this.elapsed = Date.now() - this.t0;
+        }
         const now = this.elapsed;
         const last = this.laps.length > 0 ? this.laps[0].total : 0;
         const split = now - last;
@@ -61,7 +81,10 @@ const Stopwatch = {
     },
 
     reset() {
-        this.elapsed = 0; this.laps = []; this.render(0); this.renderLaps();
+        this.elapsed = 0;
+        this.laps = [];
+        this.render(0);
+        this.renderLaps();
         this.lapsDiv.style.display = 'none';
         this.updateSubBtn();
         this.totalDistance = 0;
@@ -121,16 +144,20 @@ const Stopwatch = {
 
     startTracking() {
         if (!navigator.geolocation) {
-            alert('Geolocation is not supported by your browser');
-            this.toggleTracking(false);
+            this.trackingEnabled = false;
+            if (this.statsDiv) this.statsDiv.style.display = 'none';
             return;
         }
         this.stopTracking();
-        this.watchId = navigator.geolocation.watchPosition(
-            (pos) => this.handlePosition(pos),
-            (err) => console.warn('Geo Error:', err),
-            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-        );
+        try {
+            this.watchId = navigator.geolocation.watchPosition(
+                (pos) => this.handlePosition(pos),
+                (err) => console.warn('Geo Error:', err),
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            );
+        } catch (e) {
+            console.warn('Geolocation Error:', e);
+        }
     },
 
     stopTracking() {

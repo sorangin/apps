@@ -15,6 +15,17 @@ const Background = {
             this.video.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21hc2YxbXA0MgAAAAhmcmVlAAAAAG1kYXQAAAAIZnJlZQAAAAt0cmFrAAACAGlzb21hc2YxbXA0MgAAAAhmcmVlAAAACGZyZWUAAAALdHJhawAAAgBpc29tYXNmMW1wNDIAAAAIZnJlZQAAAARtZWFk';
             document.body.appendChild(this.video);
         }
+
+        if ('wakeLock' in navigator) {
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible') {
+                    if ((typeof Timer !== 'undefined' && Timer.isRunning) || (typeof Stopwatch !== 'undefined' && Stopwatch.running)) {
+                        this.wakeLock = null;
+                        await this.startPersistence();
+                    }
+                }
+            });
+        }
     },
 
     async requestNotificationPermission() {

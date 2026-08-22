@@ -21,6 +21,17 @@ const Timer = {
             }
         });
 
+        document.querySelectorAll('.preset-val').forEach(el => {
+            el.addEventListener('keydown', e => this.handlePresetKeydown(e, el));
+            el.addEventListener('input', () => this.handlePresetInput(el));
+            el.addEventListener('paste', e => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                const clean = text.replace(/[^0-9.]/g, '');
+                document.execCommand('insertText', false, clean);
+            });
+        });
+
         const saved = localStorage.getItem('timer_presets');
         if (saved) {
             try {
@@ -41,6 +52,43 @@ const Timer = {
         });
         this.duration = this.timeLeft;
         this.updateDisplay();
+    },
+
+    handlePresetKeydown(e, el) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            el.blur();
+            return;
+        }
+        // Allow navigation and control shortcuts
+        if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'].includes(e.key) ||
+            e.ctrlKey || e.metaKey) {
+            return;
+        }
+        // Allow digits 0-9
+        if (/^[0-9]$/.test(e.key)) {
+            return;
+        }
+        // Allow decimal point only if one isn't already present (or is part of selection being replaced)
+        if (e.key === '.') {
+            const selection = window.getSelection() ? window.getSelection().toString() : '';
+            if (!el.textContent.includes('.') || selection.includes('.')) {
+                return;
+            }
+        }
+        // Reject all other characters (letters, symbols, spaces, newlines)
+        e.preventDefault();
+    },
+
+    handlePresetInput(el) {
+        let val = el.textContent.replace(/[^0-9.]/g, '');
+        const parts = val.split('.');
+        if (parts.length > 2) {
+            val = parts[0] + '.' + parts.slice(1).join('');
+        }
+        if (el.textContent !== val) {
+            el.textContent = val;
+        }
     },
 
     syncTimer() {
