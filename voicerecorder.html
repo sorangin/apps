@@ -783,15 +783,64 @@
         linkManifest.setAttribute('href', URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' })));
         document.head.appendChild(linkManifest);
 
-        // Explicitly unregister any stale/broken service workers (especially blob-URL SWs)
+        // --- Offline Service Worker (Enables full offline access) ---
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for (let registration of registrations) {
-                    registration.unregister().then(unregistered => {
-                        console.log('Unregistered stale Service Worker:', unregistered);
-                    });
-                }
-            }).catch(err => console.log('SW Unregister Error:', err));
+            const swCode = `
+                const APP_CACHE = 'voicerecorder-app-v2';
+                self.addEventListener('install', (e) => {
+                    self.skipWaiting();
+                });
+                self.addEventListener('activate', (e) => {
+                    e.waitUntil(
+                        caches.keys().then((keys) => {
+                            return Promise.all(
+                                keys.map((key) => {
+                                    if (key !== APP_CACHE && !key.startsWith('VoiceRecorderBackup')) {
+                                        return caches.delete(key);
+                                    }
+                                })
+                            );
+                        }).then(() => self.clients.claim())
+                    );
+                });
+                self.addEventListener('fetch', (e) => {
+                    if (e.request.method !== 'GET') return;
+                    e.respondWith(
+                        fetch(e.request)
+                            .then((response) => {
+                                if (response && response.status === 200) {
+                                    const respClone = response.clone();
+                                    caches.open(APP_CACHE).then((cache) => cache.put(e.request, respClone));
+                                }
+                                return response;
+                            })
+                            .catch(async () => {
+                                const cached = await caches.match(e.request);
+                                if (cached) return cached;
+                                // If navigating to the app while offline, return the cached main HTML page
+                                if (e.request.mode === 'navigate') {
+                                    return (await caches.match(self.registration.scope)) || (await caches.match('./')) || (await caches.match(''));
+                                }
+                                return new Response('Offline', { status: 503, statusText: 'Offline' });
+                            })
+                    );
+                });
+            `;
+            const swUrl = 'data:text/javascript;base64,' + btoa(swCode);
+            navigator.serviceWorker.register(swUrl, { scope: window.location.href })
+                .then(reg => {
+                    console.log('Offline SW registered successfully:', reg.scope);
+                })
+                .catch(err => {
+                    console.log('SW registration error:', err);
+                });
+
+            // Cache the current page URL immediately into APP_CACHE so it's ready for offline launch
+            if (window.caches) {
+                caches.open('voicerecorder-app-v2').then(cache => {
+                    cache.add(window.location.href).catch(() => {});
+                });
+            }
         }
 
         // --- App Logic ---
