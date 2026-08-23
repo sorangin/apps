@@ -1636,8 +1636,8 @@
                     <p>Items checked off move to Trash. Use the trash icon on the header to wipe them all at once.</p>
                 </section>
                 <section>
-                    <h3 class="text-zinc-500 font-bold uppercase text-[11px] tracking-widest mb-2">Sync</h3>
-                    <p>Enter your Sync ID in the menu to access your data on any device in real-time.</p>
+                    <h3 class="text-zinc-500 font-bold uppercase text-[11px] tracking-widest mb-2">Private Account & Sync</h3>
+                    <p>Create an account or sign in via the menu to protect your private data and access your tasks across all devices in real-time.</p>
                 </section>
             </div>
             <button onclick="closeHelp()"
@@ -1775,6 +1775,87 @@
         </div>
     </div>
 
+    <!-- Auth Modal (Sign In / Register) -->
+    <div id="auth-modal" onclick="closeAuthModal()" style="display: none;"
+        class="fixed inset-0 z-[30000] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300 bg-black/80 backdrop-blur-md">
+        <div onclick="event.stopPropagation()"
+            class="bg-[#161618] border border-[#2d2d30] rounded-3xl p-6 sm:p-8 w-[92%] max-w-[380px] scale-95 transition-all duration-300 shadow-2xl relative">
+            
+            <!-- Close Button -->
+            <button onclick="closeAuthModal()" class="absolute top-5 right-5 text-zinc-500 hover:text-white transition-colors p-1">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <!-- Header / Title -->
+            <div class="text-center mb-6">
+                <div class="inline-flex p-3 rounded-2xl bg-blue-500/10 text-blue-400 mb-3">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <h2 id="auth-modal-title" class="text-xl font-black text-white tracking-tight">Private Account</h2>
+                <p id="auth-modal-subtitle" class="text-xs text-zinc-400 mt-1">Sign in to access your private data securely.</p>
+            </div>
+
+            <!-- Tab Switcher (Sign In vs Create Account) -->
+            <div class="flex bg-[#27272a] p-1 rounded-xl mb-5">
+                <button type="button" id="auth-tab-signin" onclick="switchAuthMode('signin')"
+                    class="flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow">Sign In</button>
+                <button type="button" id="auth-tab-signup" onclick="switchAuthMode('signup')"
+                    class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-zinc-400 hover:text-white">Create Account</button>
+            </div>
+
+            <!-- Form -->
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="text-[10px] text-zinc-500 font-extrabold uppercase tracking-wider mb-1.5 block">Email</label>
+                    <input id="auth-email" type="email" required placeholder="name@example.com" autocomplete="email"
+                        class="w-full bg-[#27272a] border border-[#3f3f46] rounded-xl px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-[10px] text-zinc-500 font-extrabold uppercase tracking-wider block">Password</label>
+                        <button type="button" id="auth-forgot-btn" onclick="handleForgotPassword()" class="text-[10px] text-blue-400 hover:underline">Forgot?</button>
+                    </div>
+                    <div class="relative">
+                        <input id="auth-password" type="password" required placeholder="••••••••" minlength="6" autocomplete="current-password"
+                            class="w-full bg-[#27272a] border border-[#3f3f46] rounded-xl pl-3.5 pr-10 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-1">
+                            <svg id="auth-pwd-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Alert Message -->
+                <div id="auth-alert" class="hidden p-3 rounded-xl text-xs font-semibold leading-tight"></div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="auth-submit-btn"
+                    class="w-full mt-2 bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30">
+                    <span id="auth-submit-text">Sign In</span>
+                    <svg id="auth-spinner" class="hidden animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </form>
+
+            <div class="mt-4 pt-4 border-t border-[#27272a] text-center">
+                <button type="button" onclick="closeAuthModal()" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                    Continue in Guest / Offline Mode
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Victory Modal Overlay -->
     <div id="victory-modal" class="victory-modal-overlay">
         <canvas id="victory-confetti-canvas" class="victory-confetti-canvas"></canvas>
@@ -1816,13 +1897,15 @@
         }
 
         #edit-sec-modal.active,
+        #auth-modal.active,
         #help-modal.active {
             display: flex;
             opacity: 1;
             pointer-events: auto;
         }
 
-        #edit-sec-modal.active>div {
+        #edit-sec-modal.active>div,
+        #auth-modal.active>div {
             transform: scale(1);
         }
 
@@ -1899,29 +1982,29 @@
 
     <script>
         // PWA Helper
-        // Generate an icon
-        const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="background:#0c0c0d"><rect width="24" height="24" fill="#0c0c0d"/><path d="M12 5v14M5 12h14" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/></svg>`;
-        const iconBlob = new Blob([iconSVG], { type: 'image/svg+xml' });
-        const iconURL = URL.createObjectURL(iconBlob);
+        if (window.location.protocol !== 'file:') {
+            const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="background:#0c0c0d"><rect width="24" height="24" fill="#0c0c0d"/><path d="M12 5v14M5 12h14" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/></svg>`;
+            const iconDataURI = 'data:image/svg+xml;base64,' + btoa(iconSVG);
 
-        const manifest = {
-            "id": window.location.pathname,
-            "name": "To Do List",
-            "short_name": "ToDo",
-            "start_url": window.location.href,
-            "scope": window.location.href,
-            "display": "standalone",
-            "background_color": "#0c0c0d",
-            "theme_color": "#0c0c0d",
-            "icons": [
-                { "src": iconURL, "sizes": "512x512", "type": "image/svg+xml" },
-                { "src": iconURL, "sizes": "192x192", "type": "image/svg+xml" }
-            ]
-        };
-        const linkManifest = document.createElement('link');
-        linkManifest.setAttribute('rel', 'manifest');
-        linkManifest.setAttribute('href', URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' })));
-        document.head.appendChild(linkManifest);
+            const manifest = {
+                "id": window.location.pathname,
+                "name": "To Do List",
+                "short_name": "ToDo",
+                "start_url": window.location.href,
+                "scope": window.location.href,
+                "display": "standalone",
+                "background_color": "#0c0c0d",
+                "theme_color": "#0c0c0d",
+                "icons": [
+                    { "src": iconDataURI, "sizes": "512x512", "type": "image/svg+xml" },
+                    { "src": iconDataURI, "sizes": "192x192", "type": "image/svg+xml" }
+                ]
+            };
+            const linkManifest = document.createElement('link');
+            linkManifest.setAttribute('rel', 'manifest');
+            linkManifest.setAttribute('href', 'data:application/manifest+json;base64,' + btoa(JSON.stringify(manifest)));
+            document.head.appendChild(linkManifest);
+        }
 
         // Utility: Wash out color (make subtler/closer to white)
         function wash(hex, amount = 0.5) {
@@ -2004,7 +2087,9 @@
             container.style.setProperty('--cols', cols);
         }
 
-        let syncID = (localStorage.getItem('todo_sync_id') || '').toLowerCase().trim();
+        let currentUser = null;
+        let authMode = 'signin';
+        let syncID = (localStorage.getItem('todo_auth_user_id') || localStorage.getItem('todo_sync_id') || '').toLowerCase().trim();
         let isOnline = navigator.onLine;
         let pendingSync = syncID ? (localStorage.getItem(`todo_pending_sync_${syncID}`) === 'true') : false;
 
@@ -2331,28 +2416,97 @@
             if (mobNotes) mobNotes.innerHTML = db.notes || '';
             render(false);
 
-            if (syncID) {
-                // Background sync - don't await so UI appears immediately
-                (async () => {
-                    // Wait for Supabase to be available (async script loading)
-                    let retries = 0;
-                    while (!initSupabase() && retries < 50) { await new Promise(r => setTimeout(r, 100)); retries++; }
-                    if (!supabaseClient) { console.warn('Supabase not available, running offline'); updateStatus(false); return; }
-                    if (pendingSync && isOnline) {
-                        await pushToCloud();
+            // Background Supabase Auth and Sync initialization
+            (async () => {
+                let retries = 0;
+                while (!initSupabase() && retries < 50) { await new Promise(r => setTimeout(r, 100)); retries++; }
+                if (!supabaseClient) { console.warn('Supabase not available, running offline'); updateStatus(false); return; }
+
+                // Check for existing authenticated session
+                try {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (session?.user) {
+                        currentUser = session.user;
+                        syncID = currentUser.id;
+                        localStorage.setItem('todo_auth_user_id', currentUser.id);
+                        loadLocal();
+                        render(false);
+                        if (pendingSync && isOnline) {
+                            await pushToCloud();
+                        } else {
+                            await pullFromCloud();
+                        }
+                        subscribeRealtime();
+                    } else if (syncID) {
+                        if (pendingSync && isOnline) {
+                            await pushToCloud();
+                        } else {
+                            await pullFromCloud();
+                        }
+                        subscribeRealtime();
                     } else {
-                        await pullFromCloud();
+                        // Unauthenticated - open Sign In after slight delay so users can log in
+                        setTimeout(() => openAuthModal('signin'), 500);
                     }
-                    subscribeRealtime();
-                })();
-            } else {
-                // Wait for Supabase before prompting sync ID
-                (async () => {
-                    let retries = 0;
-                    while (!initSupabase() && retries < 50) { await new Promise(r => setTimeout(r, 100)); retries++; }
-                    if (supabaseClient) setTimeout(promptSyncID, 500);
-                })();
-            }
+                } catch (e) {
+                    console.warn("Session check error:", e);
+                }
+
+                // Listen for real-time auth changes (Sign In / Sign Out / Token Refresh)
+                supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
+                    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                        if (newSession?.user && (!currentUser || currentUser.id !== newSession.user.id)) {
+                            currentUser = newSession.user;
+                            syncID = currentUser.id;
+                            localStorage.setItem('todo_auth_user_id', currentUser.id);
+
+                            // Migrate guest data if user is signing into an account for the first time
+                            const guestStr = localStorage.getItem('todo_db_guest') || localStorage.getItem('todo_db');
+                            if (guestStr && !localStorage.getItem(`todo_db_${currentUser.id}`)) {
+                                try {
+                                    const guestDb = JSON.parse(guestStr);
+                                    if (guestDb.tasks?.length || guestDb.dailies?.length || guestDb.shopping?.length || guestDb.notes?.length) {
+                                        db = mergeDB(guestDb, null).merged;
+                                        saveLocal();
+                                    }
+                                } catch (e) {}
+                            } else {
+                                loadLocal();
+                            }
+
+                            renderTabOrder();
+                            updateTabVisibility();
+                            render(false);
+                            await pullFromCloud();
+                            subscribeRealtime();
+                        }
+                    } else if (event === 'SIGNED_OUT') {
+                        currentUser = null;
+                        syncID = '';
+                        localStorage.removeItem('todo_auth_user_id');
+                        db = migrateDB({
+                            tasks: [], shopping: [], dailies: [],
+                            taskSections: [{ id: 'Tasks', title: 'Tasks', color: '#ffffff' }],
+                            shopCategories: [
+                                { id: 'food', title: 'Food', color: '#f59e0b' },
+                                { id: 'household', title: 'Household', color: '#3b82f6' },
+                                { id: 'misc', title: 'Misc', color: '#a855f7' }
+                            ],
+                            dailySections: [
+                                { id: 'Daily', title: 'Daily', interval: 'daily', color: '#3b82f6' },
+                                { id: 'Weekly', title: 'Weekly', interval: 'weekly', color: '#10b981' },
+                                { id: 'Monthly', title: 'Monthly', interval: 'monthly', color: '#8b5cf6' }
+                            ],
+                            settings: { tabs: { tasks: true, shopping: true, dailies: true, notes: true }, tabOrder: ['tasks', 'dailies', 'shopping', 'notes'], m: 0 },
+                            notes: "", notesM: 0
+                        });
+                        renderTabOrder();
+                        updateTabVisibility();
+                        render(false);
+                        updateStatus(false);
+                    }
+                });
+            })();
 
             checkDailiesReset();
 
@@ -3049,7 +3203,8 @@
                 });
 
                 const comp = renderList.filter(i => i.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-                comp.forEach(i => orphaned.delete(buildItem(archC, i, itemMap)));
+                const builtArchCards = comp.map(i => { const c = buildItem(archC, i, itemMap); orphaned.delete(c); return c; });
+                builtArchCards.forEach(c => archC.appendChild(c));
                 updateGridColumns(archC, comp);
                 archiveArea.classList.toggle('hidden', comp.length === 0);
             } else if (tab === 'dailies') {
@@ -4018,7 +4173,7 @@
             hOpt.className = 'menu-opt';
             hOpt.style.color = '#ffffff';
             hOpt.innerHTML = `<span>Help & Tutorial</span><span class="text-[10px] opacity-40 font-black">?</span>`;
-            hOpt.onclick = (e) => { e.stopPropagation(); m.classList.remove('active'); openHelp(); };
+            hOpt.onclick = (e) => { e.stopPropagation(); closeOptionsMenu(); openHelp(); };
             m.appendChild(hOpt);
 
             // Day Reset Time
@@ -4041,20 +4196,47 @@
             };
             m.appendChild(rOpt);
 
-            // Sync ID Option
-            const sOpt = document.createElement('button');
-            sOpt.className = 'menu-opt';
-            sOpt.style.color = '#ffffff';
-            sOpt.innerHTML = `<span>Sync ID</span><span class="text-[10px] font-black underline" style="color:#3b82f6">${syncID || 'None'}</span>`;
-            sOpt.onclick = (e) => { e.stopPropagation(); promptSyncID(); };
-            m.appendChild(sOpt);
+            // Account Section
+            const accHead = document.createElement('div');
+            accHead.className = 'text-[9px] uppercase tracking-widest font-black text-zinc-600 px-3 mt-1 mb-1';
+            accHead.innerText = 'Account';
+            m.appendChild(accHead);
+
+            const accOpt = document.createElement('div');
+            accOpt.className = 'menu-opt flex flex-col items-start gap-1 !p-3 bg-zinc-800/40 rounded-xl mb-2 border border-white/5';
+            
+            if (currentUser) {
+                accOpt.innerHTML = `
+                    <div class="flex items-center justify-between w-full">
+                        <div class="flex items-center gap-2 truncate">
+                            <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
+                            <span class="text-xs font-bold text-white truncate">${currentUser.email || 'Private Account'}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-2 w-full">
+                        <button onclick="event.stopPropagation(); closeOptionsMenu(); handleSignOut();" class="flex-1 py-1.5 bg-red-900/30 text-red-400 hover:bg-red-900/50 rounded-lg text-[10px] font-bold transition">Log Out</button>
+                    </div>
+                `;
+            } else {
+                accOpt.innerHTML = `
+                    <div class="flex items-center gap-2 text-zinc-400 text-xs font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-zinc-600 flex-shrink-0"></span>
+                        <span>Guest / Offline Mode</span>
+                    </div>
+                    <div class="flex gap-2 mt-2 w-full">
+                        <button onclick="event.stopPropagation(); closeOptionsMenu(); openAuthModal('signin');" class="flex-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow">Sign In</button>
+                        <button onclick="event.stopPropagation(); closeOptionsMenu(); openAuthModal('signup');" class="flex-1 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-[10px] font-bold transition">Register</button>
+                    </div>
+                `;
+            }
+            m.appendChild(accOpt);
 
             // Export Data Option
             const eOpt = document.createElement('button');
             eOpt.className = 'menu-opt';
             eOpt.style.color = '#ffffff';
             eOpt.innerHTML = `<span>Export Data</span><span class="text-[10px] font-black" style="color:#10b981">↓ JSON</span>`;
-            eOpt.onclick = (e) => { e.stopPropagation(); m.classList.remove('active'); exportData(); };
+            eOpt.onclick = (e) => { e.stopPropagation(); closeOptionsMenu(); exportData(); };
             m.appendChild(eOpt);
 
             // Import Data Option
@@ -4062,31 +4244,186 @@
             iOpt.className = 'menu-opt';
             iOpt.style.color = '#ffffff';
             iOpt.innerHTML = `<span>Import Data</span><span class="text-[10px] font-black" style="color:#ef4444">↑ JSON</span>`;
-            iOpt.onclick = (e) => { e.stopPropagation(); m.classList.remove('active'); importData(); };
+            iOpt.onclick = (e) => { e.stopPropagation(); closeOptionsMenu(); importData(); };
             m.appendChild(iOpt);
+        }
 
-            // Sync History
-            const history = getSyncHistory();
-            if (history.length > 0) {
-                const head = document.createElement('div');
-                head.className = 'text-[9px] uppercase tracking-widest font-black text-zinc-600 px-3 mt-2 mb-1';
-                head.innerText = 'Sync History';
-                m.appendChild(head);
-                history.forEach(id => {
-                    if (id === syncID) return;
-                    const hOpt = document.createElement('div');
-                    hOpt.className = 'menu-opt flex items-center justify-between group';
-                    hOpt.innerHTML = `
-                        <div class="flex-1 cursor-pointer font-bold underline" style="color:#3b82f6" onclick="event.stopPropagation(); localStorage.setItem('todo_sync_id', '${id}'); window.location.reload();">
-                            ${id}
-                        </div>
-                        <button class="p-2 text-zinc-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation(); removeFromSyncHistory('${id}'); renderOptionsMenu(document.getElementById('fab-menu'));">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-                    `;
-                    m.appendChild(hOpt);
-                });
+        function closeOptionsMenu() {
+            const m = document.getElementById('fab-menu');
+            if (m) {
+                m.classList.remove('active');
+                setTimeout(() => { if (!m.classList.contains('active')) m.style.display = 'none'; }, 200);
             }
+            if (menuCloseHandler) {
+                document.removeEventListener('click', menuCloseHandler);
+                menuCloseHandler = null;
+            }
+        }
+
+        // --- Authentication Helper Functions ---
+        function openAuthModal(mode = 'signin') {
+            authMode = mode;
+            switchAuthMode(mode);
+            const m = document.getElementById('auth-modal');
+            if (!m) return;
+            const alertBox = document.getElementById('auth-alert');
+            if (alertBox) { alertBox.className = 'hidden'; alertBox.innerText = ''; }
+            m.style.display = 'flex';
+            setTimeout(() => {
+                m.classList.add('active');
+                document.getElementById('auth-email')?.focus();
+            }, 10);
+        }
+
+        function closeAuthModal() {
+            const m = document.getElementById('auth-modal');
+            if (!m) return;
+            m.classList.remove('active');
+            setTimeout(() => { if (!m.classList.contains('active')) m.style.display = 'none'; }, 300);
+        }
+
+        function switchAuthMode(mode) {
+            authMode = mode;
+            const isSignIn = mode === 'signin';
+            const tabIn = document.getElementById('auth-tab-signin');
+            const tabUp = document.getElementById('auth-tab-signup');
+            const title = document.getElementById('auth-modal-title');
+            const sub = document.getElementById('auth-modal-subtitle');
+            const submitText = document.getElementById('auth-submit-text');
+            const forgotBtn = document.getElementById('auth-forgot-btn');
+            const alertBox = document.getElementById('auth-alert');
+
+            if (alertBox) { alertBox.className = 'hidden'; alertBox.innerText = ''; }
+
+            if (isSignIn) {
+                if (tabIn) tabIn.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow';
+                if (tabUp) tabUp.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition-all text-zinc-400 hover:text-white';
+                if (title) title.innerText = 'Welcome Back';
+                if (sub) sub.innerText = 'Sign in to access your private data securely.';
+                if (submitText) submitText.innerText = 'Sign In';
+                if (forgotBtn) forgotBtn.style.display = '';
+            } else {
+                if (tabUp) tabUp.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow';
+                if (tabIn) tabIn.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition-all text-zinc-400 hover:text-white';
+                if (title) title.innerText = 'Create Account';
+                if (sub) sub.innerText = 'Each person gets their own private, password-protected lists.';
+                if (submitText) submitText.innerText = 'Create Account';
+                if (forgotBtn) forgotBtn.style.display = 'none';
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const pwd = document.getElementById('auth-password');
+            if (!pwd) return;
+            pwd.type = pwd.type === 'password' ? 'text' : 'password';
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            if (!initSupabase()) {
+                showAuthAlert('Cloud service is currently unreachable. Check your connection.', 'error');
+                return;
+            }
+
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const spinner = document.getElementById('auth-spinner');
+            const submitBtn = document.getElementById('auth-submit-btn');
+
+            if (!email || !password) return;
+
+            submitBtn.disabled = true;
+            spinner.classList.remove('hidden');
+
+            try {
+                if (authMode === 'signin') {
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (error) throw error;
+                    showAuthAlert('Signed in successfully!', 'success');
+                    setTimeout(() => {
+                        closeAuthModal();
+                        submitBtn.disabled = false;
+                        spinner.classList.add('hidden');
+                    }, 500);
+                } else {
+                    const { data, error } = await supabaseClient.auth.signUp({ email, password });
+                    if (error) throw error;
+                    if (data.session) {
+                        showAuthAlert('Account created successfully!', 'success');
+                        setTimeout(() => {
+                            closeAuthModal();
+                            submitBtn.disabled = false;
+                            spinner.classList.add('hidden');
+                        }, 500);
+                    } else {
+                        showAuthAlert('Account created! Please check your email to confirm your account.', 'success');
+                        submitBtn.disabled = false;
+                        spinner.classList.add('hidden');
+                    }
+                }
+            } catch (err) {
+                showAuthAlert(err.message || 'Authentication error. Please try again.', 'error');
+                submitBtn.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function showAuthAlert(msg, type = 'error') {
+            const box = document.getElementById('auth-alert');
+            if (!box) return;
+            box.className = type === 'error' 
+                ? 'p-3 rounded-xl text-xs font-semibold leading-tight bg-red-500/10 border border-red-500/20 text-red-400'
+                : 'p-3 rounded-xl text-xs font-semibold leading-tight bg-green-500/10 border border-green-500/20 text-green-400';
+            box.innerText = msg;
+            box.classList.remove('hidden');
+        }
+
+        async function handleForgotPassword() {
+            const email = document.getElementById('auth-email').value.trim();
+            if (!email) {
+                showAuthAlert('Please enter your email above to reset password.', 'error');
+                return;
+            }
+            if (!initSupabase()) return;
+            try {
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+                if (error) throw error;
+                showAuthAlert('Password reset email sent! Please check your inbox.', 'success');
+            } catch (err) {
+                showAuthAlert(err.message || 'Error sending password reset email.', 'error');
+            }
+        }
+
+        async function handleSignOut() {
+            showConfirm('Are you sure you want to log out of your account?', async () => {
+                if (supabaseClient) {
+                    await supabaseClient.auth.signOut();
+                }
+                currentUser = null;
+                syncID = '';
+                localStorage.removeItem('todo_auth_user_id');
+                db = migrateDB({
+                    tasks: [], shopping: [], dailies: [],
+                    taskSections: [{ id: 'Tasks', title: 'Tasks', color: '#ffffff' }],
+                    shopCategories: [
+                        { id: 'food', title: 'Food', color: '#f59e0b' },
+                        { id: 'household', title: 'Household', color: '#3b82f6' },
+                        { id: 'misc', title: 'Misc', color: '#a855f7' }
+                    ],
+                    dailySections: [
+                        { id: 'Daily', title: 'Daily', interval: 'daily', color: '#3b82f6' },
+                        { id: 'Weekly', title: 'Weekly', interval: 'weekly', color: '#10b981' },
+                        { id: 'Monthly', title: 'Monthly', interval: 'monthly', color: '#8b5cf6' }
+                    ],
+                    settings: { tabs: { tasks: true, shopping: true, dailies: true, notes: true }, tabOrder: ['tasks', 'dailies', 'shopping', 'notes'], m: 0 },
+                    notes: "", notesM: 0
+                });
+                renderTabOrder();
+                updateTabVisibility();
+                render(false);
+                updateStatus(false);
+                openAuthModal('signin');
+            }, "Log Out");
         }
 
         let menuCloseHandler = null;
@@ -4295,28 +4632,25 @@
             input.click();
         }
 
-        function saveLocal() { if (syncID) localStorage.setItem(`todo_db_${syncID}`, JSON.stringify(db)); }
+        function saveLocal() {
+            const key = currentUser ? `todo_db_${currentUser.id}` : (syncID ? `todo_db_${syncID}` : 'todo_db_guest');
+            localStorage.setItem(key, JSON.stringify(db));
+        }
         function loadLocal() {
-            if (!syncID) return;
-            const s = localStorage.getItem(`todo_db_${syncID}`);
+            const key = currentUser ? `todo_db_${currentUser.id}` : (syncID ? `todo_db_${syncID}` : 'todo_db_guest');
+            let s = localStorage.getItem(key);
+            if (!s && !currentUser && !syncID) {
+                s = localStorage.getItem('todo_db');
+            }
             if (s) {
-                db = JSON.parse(s);
-                // Migrate plain-text notes to HTML for contentEditable
-                if (db.notes && !/<[a-z][\s\S]*>/i.test(db.notes)) {
-                    db.notes = db.notes.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                }
-            } else {
-                // FALLBACK: Only pull legacy key if they have literally no sync history (first time ever migrating).
-                // If they have history, they are deliberately making a new, empty sync ID.
-                const history = getSyncHistory();
-                if (history.length === 0) {
-                    const legacy = localStorage.getItem('todo_db');
-                    if (legacy) {
-                        db = JSON.parse(legacy);
-                        if (db.notes && !/<[a-z][\s\S]*>/i.test(db.notes)) {
-                            db.notes = db.notes.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                        }
+                try {
+                    db = JSON.parse(s);
+                    // Migrate plain-text notes to HTML for contentEditable
+                    if (db.notes && !/<[a-z][\s\S]*>/i.test(db.notes)) {
+                        db.notes = db.notes.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
                     }
+                } catch (e) {
+                    console.error("Error loading local DB", e);
                 }
             }
         }
@@ -4751,7 +5085,13 @@
             const s = document.getElementById('menu-btn');
             if (!s) return;
             s.className = (ok ? (pendingSync ? 'status-syncing' : 'status-online') : 'status-offline') + ' transition-all duration-300';
-            s.title = ok ? (pendingSync ? 'Syncing...' : 'Online') : 'Offline';
+            let title = ok ? (pendingSync ? 'Syncing...' : 'Online') : 'Offline';
+            if (currentUser) {
+                title += ` (${currentUser.email || 'Account'})`;
+            } else {
+                title += ' (Guest)';
+            }
+            s.title = title;
         }
 
         const VICTORY_QUOTES = [
