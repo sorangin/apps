@@ -3,62 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Web Applications & Tools Hub - Launchpad for projects and apps.">
-  <title>App Launcher | Web Apps Portal</title>
+  <title>Apps</title>
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <style>
     :root {
-      --bg: #0b0f19;
-      --bg-gradient: radial-gradient(circle at 50% 0%, #172033 0%, #0b0f19 75%);
-      --surface: #131b2e;
-      --surface-hover: #1b2640;
-      --surface-border: #1f2d4d;
-      --surface-border-hover: #3b82f6;
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.25);
-      --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-      --card-shadow-hover: 0 16px 32px -4px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-glow);
-      --pill-bg: #1c263c;
-      --pill-active-bg: #3b82f6;
-      --pill-active-text: #ffffff;
-      --input-bg: #131b2e;
-      --input-border: #243254;
-      --radius-lg: 16px;
-      --radius-md: 12px;
-      --radius-sm: 8px;
-      --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    [data-theme="light"] {
-      --bg: #f8fafc;
-      --bg-gradient: radial-gradient(circle at 50% 0%, #e2e8f0 0%, #f8fafc 75%);
-      --surface: #ffffff;
-      --surface-hover: #f1f5f9;
-      --surface-border: #e2e8f0;
-      --surface-border-hover: #2563eb;
-      --text-primary: #0f172a;
-      --text-secondary: #475569;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-hover: #334155;
+      --border: #334155;
+      --text: #f8fafc;
       --text-muted: #94a3b8;
-      --accent: #2563eb;
-      --accent-glow: rgba(37, 99, 235, 0.15);
-      --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
-      --card-shadow-hover: 0 16px 32px -4px rgba(37, 99, 235, 0.12);
-      --pill-bg: #e2e8f0;
-      --pill-active-bg: #2563eb;
-      --pill-active-text: #ffffff;
-      --input-bg: #ffffff;
-      --input-border: #cbd5e1;
+      --accent: #38bdf8;
     }
 
     * {
@@ -68,780 +30,242 @@
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      background-image: var(--bg-gradient);
-      background-attachment: fixed;
-      color: var(--text-primary);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      line-height: 1.5;
-      transition: background 0.3s ease, color 0.3s ease;
+      padding: 2.5rem 1.5rem;
     }
 
     .container {
-      max-width: 1200px;
-      width: 100%;
+      max-width: 960px;
       margin: 0 auto;
-      padding: 2.5rem 1.5rem 4rem;
-      flex: 1;
+      width: 100%;
     }
 
-    /* Top Bar */
     header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2.5rem;
-      flex-wrap: wrap;
-      gap: 1.25rem;
-    }
-
-    .brand-title {
-      display: flex;
-      align-items: center;
-      gap: 0.85rem;
-    }
-
-    .brand-logo-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 1.35rem;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-    }
-
-    .brand-text h1 {
-      font-size: 1.5rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .brand-text p {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .theme-toggle-btn {
-      background: var(--surface);
-      border: 1px solid var(--surface-border);
-      color: var(--text-secondary);
-      width: 42px;
-      height: 42px;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      transition: var(--transition);
-    }
-
-    .theme-toggle-btn:hover {
-      color: var(--accent);
-      border-color: var(--surface-border-hover);
-      transform: translateY(-1px);
-    }
-
-    /* Hero / Search Section */
-    .controls-section {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-      margin-bottom: 2.25rem;
-    }
-
-    .search-wrapper {
-      position: relative;
-      width: 100%;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 1.25rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 1.1rem;
-      pointer-events: none;
-      transition: color 0.2s;
-    }
-
-    .search-input {
-      width: 100%;
-      padding: 0.95rem 3.25rem 0.95rem 3rem;
-      background: var(--input-bg);
-      border: 1px solid var(--input-border);
-      border-radius: var(--radius-md);
-      color: var(--text-primary);
-      font-size: 1rem;
-      font-family: inherit;
-      outline: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      transition: var(--transition);
-    }
-
-    .search-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
-    }
-
-    .search-input:focus + .search-icon {
-      color: var(--accent);
-    }
-
-    .search-shortcut {
-      position: absolute;
-      right: 1.25rem;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      border: 1px solid var(--surface-border);
-      padding: 2px 7px;
-      border-radius: 6px;
-      background: var(--surface);
-      pointer-events: none;
-    }
-
-    .clear-search-btn {
-      position: absolute;
-      right: 1.25rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 1rem;
-      display: none;
-    }
-    .clear-search-btn:hover {
-      color: var(--text-primary);
-    }
-
-    /* Category Filter Tags */
-    .filter-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .filter-btn {
-      background: var(--pill-bg);
-      border: 1px solid transparent;
-      color: var(--text-secondary);
-      padding: 0.45rem 0.95rem;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      transition: var(--transition);
-    }
-
-    .filter-btn:hover {
-      color: var(--text-primary);
-      border-color: var(--surface-border);
-      transform: translateY(-1px);
-    }
-
-    .filter-btn.active {
-      background: var(--pill-active-bg);
-      color: var(--pill-active-text);
-      box-shadow: 0 2px 8px var(--accent-glow);
-    }
-
-    .filter-btn .count {
-      font-size: 0.75rem;
-      opacity: 0.8;
-      background: rgba(0, 0, 0, 0.15);
-      padding: 1px 6px;
-      border-radius: 999px;
-    }
-
-    /* Apps Grid */
-    .apps-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 1.5rem;
-    }
-
-    .app-card {
-      background: var(--surface);
-      border: 1px solid var(--surface-border);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      box-shadow: var(--card-shadow);
-      text-decoration: none;
-      color: inherit;
-      transition: var(--transition);
-      position: relative;
-      overflow: hidden;
-      cursor: pointer;
-    }
-
-    .app-card::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--app-color, var(--accent));
-      opacity: 0;
-      transition: opacity 0.25s ease;
-    }
-
-    .app-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--surface-border-hover);
-      box-shadow: var(--card-shadow-hover);
-      background: var(--surface-hover);
-    }
-
-    .app-card:hover::before {
-      opacity: 1;
-    }
-
-    .card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 1.15rem;
-    }
-
-    .app-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.6rem;
-      background: var(--icon-bg, rgba(59, 130, 246, 0.1));
-      color: var(--icon-color, #3b82f6);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-      flex-shrink: 0;
-    }
-
-    .card-badge-group {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 0.35rem;
-    }
-
-    .category-badge {
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: var(--pill-bg);
-      color: var(--text-secondary);
-      border: 1px solid var(--surface-border);
-    }
-
-    .app-title {
-      font-size: 1.2rem;
-      font-weight: 700;
-      margin-bottom: 0.4rem;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .app-desc {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      line-height: 1.5;
-      margin-bottom: 1.25rem;
-      flex-grow: 1;
-    }
-
-    .card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-top: 1px solid var(--surface-border);
-      padding-top: 0.85rem;
-      margin-top: auto;
-      font-size: 0.825rem;
-    }
-
-    .launch-link {
-      font-weight: 700;
-      color: var(--accent);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      transition: transform 0.2s ease;
-    }
-
-    .app-card:hover .launch-link {
-      transform: translateX(3px);
-    }
-
-    .file-tag {
-      font-family: monospace;
-      color: var(--text-muted);
-      font-size: 0.75rem;
-    }
-
-    /* Empty state */
-    .empty-state {
-      display: none;
+      margin-bottom: 2rem;
       text-align: center;
-      padding: 4rem 1.5rem;
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      border: 1px dashed var(--surface-border);
-      grid-column: 1 / -1;
     }
 
-    .empty-icon {
-      font-size: 2.5rem;
-      color: var(--text-muted);
-      margin-bottom: 1rem;
-    }
-
-    .empty-state h3 {
-      font-size: 1.2rem;
-      color: var(--text-primary);
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
       margin-bottom: 0.5rem;
     }
 
-    .empty-state p {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
     }
 
-    /* Footer */
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .app-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .app-card:hover {
+      background: var(--card-hover);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .app-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      flex-shrink: 0;
+    }
+
+    .app-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .app-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .app-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .app-arrow {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .app-card:hover .app-arrow {
+      color: var(--accent);
+      transform: translateX(3px);
+    }
+
     footer {
+      margin-top: 3rem;
       text-align: center;
-      padding: 2rem 1.5rem;
       color: var(--text-muted);
       font-size: 0.85rem;
-      border-top: 1px solid var(--surface-border);
-      background: var(--surface);
-      margin-top: auto;
-    }
-
-    footer a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    footer a:hover {
-      text-decoration: underline;
-    }
-
-    /* Responsive */
-    @media (max-width: 640px) {
-      .container {
-        padding: 1.5rem 1rem 3rem;
-      }
-      .apps-grid {
-        grid-template-columns: 1fr;
-      }
-      .brand-text h1 {
-        font-size: 1.3rem;
-      }
     }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <!-- Header -->
     <header>
-      <div class="brand-title">
-        <div class="brand-logo-icon">
-          <i class="fa-solid fa-shapes"></i>
-        </div>
-        <div class="brand-text">
-          <h1>Applications Hub</h1>
-          <p>Personal web tools, games & creative utilities</p>
-        </div>
-      </div>
-      <div class="header-actions">
-        <button class="theme-toggle-btn" id="themeToggle" title="Toggle Theme" aria-label="Toggle Theme">
-          <i class="fa-solid fa-moon"></i>
-        </button>
-      </div>
+      <h1>Apps</h1>
     </header>
 
-    <!-- Controls -->
-    <section class="controls-section">
-      <!-- Search Input -->
-      <div class="search-wrapper">
-        <input 
-          type="text" 
-          id="searchInput" 
-          class="search-input" 
-          placeholder="Search apps by name, description, or keyword..." 
-          autocomplete="off"
-        />
-        <i class="fa-solid fa-magnifying-glass search-icon"></i>
-        <span class="search-shortcut" id="searchShortcut">/</span>
-        <button class="clear-search-btn" id="clearSearchBtn" aria-label="Clear Search">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
+    <main class="apps-grid">
+      <a href="CreatorDashboard.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-chart-pie"></i></div>
+        <div class="app-info">
+          <div class="app-title">Creator Dashboard</div>
+          <div class="app-desc">Content and project workflow dashboard</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
 
-      <!-- Filter Categories -->
-      <div class="filter-tags" id="categoryFilters">
-        <!-- Injected via JavaScript -->
-      </div>
-    </section>
+      <a href="body_nutrition_defense.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-shield-virus"></i></div>
+        <div class="app-info">
+          <div class="app-title">BioShield: Anatomical RPG</div>
+          <div class="app-desc">Human physiology defense game</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
 
-    <!-- Grid of Apps -->
-    <main class="apps-grid" id="appsGrid">
-      <!-- Injected via JavaScript -->
+      <a href="screenwriter.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-clapperboard"></i></div>
+        <div class="app-info">
+          <div class="app-title">Screenwriter</div>
+          <div class="app-desc">Scriptwriting and screenplay studio</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="myhealth.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+        <div class="app-info">
+          <div class="app-title">Lab Results & Health</div>
+          <div class="app-desc">Biomarkers and lab test tracking</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="food.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-utensils"></i></div>
+        <div class="app-info">
+          <div class="app-title">Food Ledger</div>
+          <div class="app-desc">Nutrition and meal tracker</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="timer/index.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-stopwatch-20"></i></div>
+        <div class="app-info">
+          <div class="app-title">Time Suite</div>
+          <div class="app-desc">Timer, alarm & stopwatch</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="todolist.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-list-check"></i></div>
+        <div class="app-info">
+          <div class="app-title">To-Do List</div>
+          <div class="app-desc">Task and priority manager</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="screenrecorder.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-display"></i></div>
+        <div class="app-info">
+          <div class="app-title">Screen Recorder</div>
+          <div class="app-desc">In-browser screen and audio capture</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="voicerecorder.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-microphone-lines"></i></div>
+        <div class="app-info">
+          <div class="app-title">Voice Recorder</div>
+          <div class="app-desc">Audio voice memo recorder</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="itinerary.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-plane-departure"></i></div>
+        <div class="app-info">
+          <div class="app-title">AeroRoute Itinerary</div>
+          <div class="app-desc">Flight and trip planner</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="recipes.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-kitchen-set"></i></div>
+        <div class="app-info">
+          <div class="app-title">Recipes</div>
+          <div class="app-desc">Culinary recipes and ingredients</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="file_organizer.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-folder-tree"></i></div>
+        <div class="app-info">
+          <div class="app-title">ChronoFile Organizer</div>
+          <div class="app-desc">Photo and media date sorter</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
+
+      <a href="mediakit/index.html" class="app-card">
+        <div class="app-icon"><i class="fa-solid fa-id-card"></i></div>
+        <div class="app-info">
+          <div class="app-title">Media Kit & Portfolio</div>
+          <div class="app-desc">Creator portfolio and partnerships</div>
+        </div>
+        <i class="fa-solid fa-chevron-right app-arrow"></i>
+      </a>
     </main>
-
-    <!-- No results container -->
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon"><i class="fa-solid fa-box-open"></i></div>
-      <h3>No applications found</h3>
-      <p>Try adjusting your search terms or filter selection.</p>
-    </div>
   </div>
 
-  <footer>
-    <p>&copy; <span id="year"></span> Web Applications &middot; Hosted on GitHub Pages</p>
-  </footer>
-
-  <script>
-    /**
-     * APP REGISTRY
-     * Easily add, remove, or modify apps here!
-     */
-    const APPS = [
-      {
-        title: "Creator Dashboard",
-        path: "CreatorDashboard.html",
-        category: "Creative",
-        icon: "fa-solid fa-chart-pie",
-        iconBg: "rgba(139, 92, 246, 0.15)",
-        iconColor: "#a855f7",
-        accent: "#a855f7",
-        desc: "Content creation studio, project planner, analytics overview, and workflow tracker for creators."
-      },
-      {
-        title: "BioShield: Anatomical RPG",
-        path: "body_nutrition_defense.html",
-        category: "Games",
-        icon: "fa-solid fa-shield-virus",
-        iconBg: "rgba(239, 68, 68, 0.15)",
-        iconColor: "#ef4444",
-        accent: "#ef4444",
-        desc: "Interactive anatomical defense game exploring human physiology, nutrients, and immune mechanics."
-      },
-      {
-        title: "Screenwriter Studio",
-        path: "screenwriter.html",
-        category: "Creative",
-        icon: "fa-solid fa-clapperboard",
-        iconBg: "rgba(245, 158, 11, 0.15)",
-        iconColor: "#f59e0b",
-        accent: "#f59e0b",
-        desc: "Screenplay formatting, scriptwriting studio, scene breakdown, and dialog management tool."
-      },
-      {
-        title: "Lab Results & Health",
-        path: "myhealth.html",
-        category: "Health",
-        icon: "fa-solid fa-heart-pulse",
-        iconBg: "rgba(16, 185, 129, 0.15)",
-        iconColor: "#10b981",
-        accent: "#10b981",
-        desc: "Comprehensive lab test biomarker tracking, diagnostic metrics, health insights, and trends."
-      },
-      {
-        title: "Food Ledger",
-        path: "food.html",
-        category: "Health",
-        icon: "fa-solid fa-utensils",
-        iconBg: "rgba(34, 197, 94, 0.15)",
-        iconColor: "#22c55e",
-        accent: "#22c55e",
-        desc: "Daily meal log, macronutrient tracker, calorie counter, and nutritional history recorder."
-      },
-      {
-        title: "Time Suite",
-        path: "timer/index.html",
-        category: "Utilities",
-        icon: "fa-solid fa-stopwatch-20",
-        iconBg: "rgba(6, 182, 212, 0.15)",
-        iconColor: "#06b6d4",
-        accent: "#06b6d4",
-        desc: "Multi-functional suite featuring custom countdown timers, customizable alarms, and precision stopwatch."
-      },
-      {
-        title: "To-Do List",
-        path: "todolist.html",
-        category: "Productivity",
-        icon: "fa-solid fa-list-check",
-        iconBg: "rgba(59, 130, 246, 0.15)",
-        iconColor: "#3b82f6",
-        accent: "#3b82f6",
-        desc: "Task management organizer with priority lists, categorization, and progress tracking."
-      },
-      {
-        title: "Screen Recorder",
-        path: "screenrecorder.html",
-        category: "Media",
-        icon: "fa-solid fa-display",
-        iconBg: "rgba(236, 72, 153, 0.15)",
-        iconColor: "#ec4899",
-        accent: "#ec4899",
-        desc: "In-browser video capture utility for full screens, browser tabs, windows, and microphone audio."
-      },
-      {
-        title: "Voice Recorder",
-        path: "voicerecorder.html",
-        category: "Media",
-        icon: "fa-solid fa-microphone-lines",
-        iconBg: "rgba(244, 63, 94, 0.15)",
-        iconColor: "#f43f5e",
-        accent: "#f43f5e",
-        desc: "High-quality audio voice memo recorder with waveform visualization and instant export."
-      },
-      {
-        title: "AeroRoute Itinerary",
-        path: "itinerary.html",
-        category: "Productivity",
-        icon: "fa-solid fa-plane-departure",
-        iconBg: "rgba(14, 165, 233, 0.15)",
-        iconColor: "#0ea5e9",
-        accent: "#0ea5e9",
-        desc: "Visual travel itinerary builder, flight schedule manager, and expedition organizer."
-      },
-      {
-        title: "Recipe Vault",
-        path: "recipes.html",
-        category: "Lifestyle",
-        icon: "fa-solid fa-kitchen-set",
-        iconBg: "rgba(249, 115, 22, 0.15)",
-        iconColor: "#f97316",
-        accent: "#f97316",
-        desc: "Culinary recipe collection, ingredient measurements, step-by-step directions, and notes."
-      },
-      {
-        title: "ChronoFile Organizer",
-        path: "file_organizer.html",
-        category: "Utilities",
-        icon: "fa-solid fa-folder-tree",
-        iconBg: "rgba(99, 102, 241, 0.15)",
-        iconColor: "#6366f1",
-        accent: "#6366f1",
-        desc: "Smart file sorter and chronological asset organizer for media files and photo archives."
-      },
-      {
-        title: "Media Kit & Portfolio",
-        path: "mediakit/index.html",
-        category: "Portfolio",
-        icon: "fa-solid fa-id-card",
-        iconBg: "rgba(168, 85, 247, 0.15)",
-        iconColor: "#a855f7",
-        accent: "#a855f7",
-        desc: "Professional creator portfolio, audience analytics overview, brand partnerships, and work showcase."
-      }
-    ];
-
-    // State
-    let currentCategory = "All";
-    let searchQuery = "";
-
-    // DOM Elements
-    const appsGrid = document.getElementById("appsGrid");
-    const categoryFilters = document.getElementById("categoryFilters");
-    const searchInput = document.getElementById("searchInput");
-    const searchShortcut = document.getElementById("searchShortcut");
-    const clearSearchBtn = document.getElementById("clearSearchBtn");
-    const emptyState = document.getElementById("emptyState");
-    const themeToggle = document.getElementById("themeToggle");
-    const yearSpan = document.getElementById("year");
-
-    // Initialize Year
-    if (yearSpan) yearSpan.textContent = new Date().getFullYear();
-
-    // Theme Setup
-    function initTheme() {
-      const savedTheme = localStorage.getItem("theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const theme = savedTheme || (prefersDark ? "dark" : "light");
-      setTheme(theme);
-    }
-
-    function setTheme(theme) {
-      document.documentElement.setAttribute("data-theme", theme);
-      localStorage.setItem("theme", theme);
-      const icon = themeToggle.querySelector("i");
-      if (theme === "light") {
-        icon.className = "fa-solid fa-sun";
-      } else {
-        icon.className = "fa-solid fa-moon";
-      }
-    }
-
-    themeToggle.addEventListener("click", () => {
-      const current = document.documentElement.getAttribute("data-theme");
-      setTheme(current === "light" ? "dark" : "light");
-    });
-
-    // Extract categories
-    function getCategories() {
-      const categories = ["All"];
-      APPS.forEach(app => {
-        if (!categories.includes(app.category)) {
-          categories.push(app.category);
-        }
-      });
-      return categories;
-    }
-
-    // Render Filter Buttons
-    function renderFilters() {
-      const categories = getCategories();
-      categoryFilters.innerHTML = "";
-
-      categories.forEach(cat => {
-        const count = cat === "All" 
-          ? APPS.length 
-          : APPS.filter(a => a.category === cat).length;
-
-        const btn = document.createElement("button");
-        btn.className = `filter-btn ${cat === currentCategory ? 'active' : ''}`;
-        btn.innerHTML = `${cat} <span class="count">${count}</span>`;
-        btn.addEventListener("click", () => {
-          currentCategory = cat;
-          renderFilters();
-          renderApps();
-        });
-        categoryFilters.appendChild(btn);
-      });
-    }
-
-    // Render App Cards
-    function renderApps() {
-      const filtered = APPS.filter(app => {
-        const matchesCategory = currentCategory === "All" || app.category === currentCategory;
-        const q = searchQuery.toLowerCase().trim();
-        const matchesSearch = !q || 
-          app.title.toLowerCase().includes(q) || 
-          app.desc.toLowerCase().includes(q) || 
-          app.category.toLowerCase().includes(q) ||
-          app.path.toLowerCase().includes(q);
-        
-        return matchesCategory && matchesSearch;
-      });
-
-      appsGrid.innerHTML = "";
-
-      if (filtered.length === 0) {
-        emptyState.style.display = "block";
-      } else {
-        emptyState.style.display = "none";
-        filtered.forEach(app => {
-          const card = document.createElement("a");
-          card.href = app.path;
-          card.className = "app-card";
-          card.style.setProperty("--app-color", app.accent);
-
-          card.innerHTML = `
-            <div class="card-top">
-              <div class="app-icon" style="background:${app.iconBg}; color:${app.iconColor}">
-                <i class="${app.icon}"></i>
-              </div>
-              <div class="card-badge-group">
-                <span class="category-badge">${app.category}</span>
-              </div>
-            </div>
-            <div class="app-title">
-              <span>${app.title}</span>
-            </div>
-            <p class="app-desc">${app.desc}</p>
-            <div class="card-footer">
-              <span class="file-tag">${app.path}</span>
-              <span class="launch-link">
-                Launch <i class="fa-solid fa-arrow-up-right-from-square"></i>
-              </span>
-            </div>
-          `;
-          appsGrid.appendChild(card);
-        });
-      }
-    }
-
-    // Search events
-    searchInput.addEventListener("input", (e) => {
-      searchQuery = e.target.value;
-      if (searchQuery.length > 0) {
-        searchShortcut.style.display = "none";
-        clearSearchBtn.style.display = "block";
-      } else {
-        searchShortcut.style.display = "block";
-        clearSearchBtn.style.display = "none";
-      }
-      renderApps();
-    });
-
-    clearSearchBtn.addEventListener("click", () => {
-      searchInput.value = "";
-      searchQuery = "";
-      searchShortcut.style.display = "block";
-      clearSearchBtn.style.display = "none";
-      searchInput.focus();
-      renderApps();
-    });
-
-    // Keyboard shortcut to focus search: '/' or 'Escape' to clear
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "/" && document.activeElement !== searchInput) {
-        e.preventDefault();
-        searchInput.focus();
-      } else if (e.key === "Escape" && document.activeElement === searchInput) {
-        searchInput.value = "";
-        searchQuery = "";
-        clearSearchBtn.style.display = "none";
-        searchShortcut.style.display = "block";
-        searchInput.blur();
-        renderApps();
-      }
-    });
-
-    // Initialize
-    initTheme();
-    renderFilters();
-    renderApps();
-  </script>
 </body>
 </html>
