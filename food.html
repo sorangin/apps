@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,44 +11,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         :root {
-            /* Monochromatic Premium Color Palette (Linear / Apple inspired) */
-            --bg-app: #fafafa;
-            --bg-panel: #ffffff;
-            --bg-hover: #f4f4f5;
-            --border: #e4e4e7;
-            
-            --text-main: #09090b;
-            --text-sub: #71717a;
-            --text-muted: #a1a1aa;
-            
-            --brand: #18181b;
-            --brand-hover: #27272a;
-            --brand-light: #f4f4f5;
-            
-            --good-dot: #10b981;
-            --good-bg: #ecfdf5;
-            --good-border: #a7f3d0;
-            --good-text: #065f46;
-            
-            --okay-dot: #f59e0b;
-            --okay-bg: #fffbeb;
-            --okay-border: #fde68a;
-            --okay-text: #92400e;
-            
-            --bad-dot: #ef4444;
-            --bad-bg: #fef2f2;
-            --bad-border: #fecaca;
-            --bad-text: #991b1b;
-            
-            --radius-ui: 8px;
-            --radius-card: 6px;
-            --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02);
-            --transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        [data-theme="dark"] {
+            /* Dark-only Premium Color Palette */
             --bg-app: #09090b;
             --bg-panel: #0d0d11;
             --bg-hover: #18181b;
@@ -62,17 +30,25 @@
             --brand-hover: #e4e4e7;
             --brand-light: #18181b;
             
+            --good-dot: #10b981;
             --good-bg: rgba(16, 185, 129, 0.12);
             --good-border: rgba(16, 185, 129, 0.3);
             --good-text: #34d399;
             
+            --okay-dot: #f59e0b;
             --okay-bg: rgba(245, 158, 11, 0.12);
             --okay-border: rgba(245, 158, 11, 0.3);
             --okay-text: #fbbf24;
             
+            --bad-dot: #ef4444;
             --bad-bg: rgba(239, 68, 68, 0.12);
             --bad-border: rgba(239, 68, 68, 0.3);
             --bad-text: #f87171;
+            
+            --radius-ui: 8px;
+            --radius-card: 6px;
+            --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02);
+            --transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
@@ -273,6 +249,30 @@
             display: flex;
             flex-direction: column;
             gap: 1px;
+        }
+
+        .sidebar-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 8px;
+            margin: 4px 6px 2px 6px;
+            border-radius: var(--radius-card);
+            cursor: pointer;
+            user-select: none;
+            transition: var(--transition);
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .sidebar-section-header:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .sidebar-section-header.active {
+            background-color: var(--brand-light);
+            color: var(--text-main);
         }
 
         .category-item {
@@ -867,25 +867,37 @@
                 </div>
             </div>
             
-            <div style="padding: 10px 10px 0 10px; display: flex; flex-direction: column; gap: 4px;">
-                <div class="category-item special-tab" id="tab-health-guide" onclick="app.setSection('health')" onmouseover="app.setSection('health')" style="font-weight: 600; color: #0284c7; background-color: rgba(2, 132, 199, 0.06); border: 1px solid rgba(2, 132, 199, 0.15); transition: var(--transition);">
-                    <span style="display:flex; align-items:center; gap:6px;">🥗 Healthy Foods</span>
+            <!-- Healthy Foods Section -->
+            <div class="sidebar-section-header" id="tab-health-guide" onclick="app.setSection('health')" onmouseover="app.setSection('health')">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 14px;">🥗</span>
+                    <span>Healthy Foods</span>
                 </div>
             </div>
-            <div style="height: 1px; background-color: var(--border); margin: 8px 10px 4px 10px;"></div>
-            <div class="sidebar-header">
-                <h2>Categories</h2>
-                <button class="card-action-btn" onclick="app.openCategoryModal()" title="Add Category" style="background: none; border: none; cursor: pointer; color: var(--text-muted);">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
-                </button>
-            </div>
             
-            <div class="category-list" id="category-list-container">
-                <!-- Populated dynamically -->
+            <!-- Delicious Foods Section -->
+            <div id="delicious-foods-section">
+                <div class="sidebar-section-header" id="delicious-header" onclick="app.navigateToDelicious()" onmouseover="app.navigateToDelicious()">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 14px;">🍽️</span>
+                        <span>Delicious Foods</span>
+                    </div>
+                    <button class="card-action-btn" onclick="event.stopPropagation(); app.openCategoryModal()" title="Add Category" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; padding: 2px;">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="category-list" id="category-list-container">
+                    <!-- Populated dynamically -->
+                </div>
             </div>
 
-            <!-- Import/Export Footer -->
+            <!-- Import/Export & Cloud Footer -->
             <div class="sidebar-footer">
+                <button class="btn btn-secondary" onclick="app.openSupabaseModal()" title="Supabase Cloud Sync" id="supabase-sync-btn" style="position: relative;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                    <span id="supabase-footer-dot" style="position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background-color: var(--text-muted); display: block;"></span>
+                </button>
                 <button class="btn btn-secondary" onclick="app.exportData()" title="Export Backup JSON">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 </button>
@@ -918,10 +930,6 @@
                         </button>
                         <button class="view-btn" id="view-grid-btn" onclick="app.setViewMode('grid')" title="Grid View">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
-                        </button>
-                        <div style="width: 1px; height: 14px; background-color: var(--border); margin: 0 4px;"></div>
-                        <button class="view-btn" id="theme-toggle" onclick="app.toggleTheme()" title="Toggle Theme">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path></svg>
                         </button>
                     </div>
                 </div>
@@ -989,6 +997,57 @@
     </div>
 
     <!-- Modals -->
+
+    <!-- Supabase Cloud Sync Modal -->
+    <div id="supabase-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" fill="none" stroke="#3ecf8e" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                    <span>Supabase Cloud Sync</span>
+                </h3>
+                <button class="modal-close-btn" onclick="app.closeSupabaseModal()">&times;</button>
+            </div>
+            <form onsubmit="app.saveSupabaseConfig(event)">
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                    <div id="supabase-status-indicator" style="padding: 9px 12px; border-radius: var(--radius-card); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; background: var(--bg-hover); border: 1px solid var(--border);">
+                        <span>Connection: <span id="supabase-status-text" style="color: var(--text-muted);">Not Connected</span></span>
+                        <span id="supabase-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--text-muted); display: inline-block;"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="supabase-url" class="form-label">Project URL</label>
+                        <input type="url" id="supabase-url" class="form-control" placeholder="https://xyzcompany.supabase.co" autocomplete="off" style="font-family: monospace; font-size: 11px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="supabase-key" class="form-label">Anon / Public API Key</label>
+                        <input type="password" id="supabase-key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsIn..." autocomplete="off" style="font-family: monospace; font-size: 11px;">
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-top: 2px;">
+                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; height: 32px;" onclick="app.testSupabaseConnection()">🔌 Test & Pull Data</button>
+                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; height: 32px;" onclick="app.pushLocalToSupabase()">⬆️ Push Local to Cloud</button>
+                    </div>
+
+                    <div style="margin-top: 4px; border-top: 1px solid var(--border); padding-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-size: 11px; font-weight: 600; color: var(--text-main);">Database Setup SQL</span>
+                            <button type="button" class="btn btn-secondary" style="height: 22px; font-size: 10px; padding: 0 8px;" onclick="app.copySupabaseSQL()">📋 Copy SQL Script</button>
+                        </div>
+                        <p style="font-size: 10px; color: var(--text-sub); line-height: 1.4;">
+                            Run the SQL script once in your Supabase project's SQL Editor to create the <code>categories</code>, <code>items</code>, and <code>health_selected</code> tables with anonymous policies.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeSupabaseModal()">Close</button>
+                    <button type="button" class="btn" style="background-color: var(--bad-bg); border-color: var(--bad-border); color: var(--bad-dot);" onclick="app.disconnectSupabase()">Disconnect</button>
+                    <button type="submit" class="btn btn-primary">Save & Connect</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Category Modal -->
     <div id="category-modal" class="modal-overlay">
@@ -1356,14 +1415,14 @@
                 this.modalSelectedRating = "good";
                 this.currentSection = "ledger";
                 this.healthSelected = {}; // Key: "catIndex-foodName", Value: true/false
+                this.supabase = null;
 
                 this.init();
+                this.initSupabase();
             }
 
             init() {
-                const savedTheme = localStorage.getItem("gl-theme") || "light";
-                document.documentElement.setAttribute("data-theme", savedTheme);
-                this.updateThemeButtonIcon(savedTheme);
+                document.documentElement.setAttribute("data-theme", "dark");
 
                 const cachedCategories = localStorage.getItem("gl-categories");
                 const cachedItems = localStorage.getItem("gl-items");
@@ -1396,20 +1455,9 @@
                 localStorage.setItem("gl-items", JSON.stringify(this.items));
             }
 
-            toggleTheme() {
-                const currentTheme = document.documentElement.getAttribute("data-theme");
-                const newTheme = currentTheme === "dark" ? "light" : "dark";
-                document.documentElement.setAttribute("data-theme", newTheme);
-                localStorage.setItem("gl-theme", newTheme);
-                this.updateThemeButtonIcon(newTheme);
-            }
-
-            updateThemeButtonIcon(theme) {
-                const btn = document.getElementById("theme-toggle");
-                if (theme === "dark") {
-                    btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"></path></svg>`;
-                } else {
-                    btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"></path></svg>`;
+            navigateToDelicious() {
+                if (this.currentSection === "health") {
+                    this.setActiveCategory(this.activeCategoryId || 'all');
                 }
             }
 
@@ -1458,8 +1506,6 @@
                 const tab = document.getElementById("tab-health-guide");
                 if (tab) {
                     tab.classList.remove("active");
-                    tab.style.backgroundColor = "rgba(2, 132, 199, 0.06)";
-                    tab.style.borderColor = "rgba(2, 132, 199, 0.15)";
                 }
 
                 const viewControls = document.querySelector('.view-controls');
@@ -1502,11 +1548,11 @@
                     const tab = document.getElementById("tab-health-guide");
                     if (tab) {
                         tab.classList.add("active");
-                        tab.style.backgroundColor = "rgba(2, 132, 199, 0.15)";
-                        tab.style.borderColor = "rgba(2, 132, 199, 0.3)";
                     }
 
-                    this.renderCategories();
+                    const items = document.querySelectorAll("#category-list-container .category-item");
+                    items.forEach(item => item.classList.remove("active"));
+
                     document.getElementById("active-category-title").innerText = "🥗 Healthy Foods";
 
                     document.getElementById("kanban-view").style.display = "none";
@@ -1764,6 +1810,7 @@
                 localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
                 this.renderHealthyFoods();
                 this.updateHealthCalculator();
+                this.syncHealthToDb();
             }
 
             updateHealthCalculator() {
@@ -1784,6 +1831,7 @@
                 localStorage.removeItem("gl-health-selected");
                 this.renderHealthyFoods();
                 this.updateHealthCalculator();
+                this.syncHealthToDb();
             }
 
             generateItemCardsHtml(items) {
@@ -1930,18 +1978,22 @@
                 event.preventDefault();
                 const id = document.getElementById("edit-category-id").value;
                 const name = document.getElementById("category-name").value.trim();
+                let savedCategory = null;
 
                 if (id) {
                     const catIndex = this.categories.findIndex(c => c.id === id);
                     if (catIndex !== -1) {
                         this.categories[catIndex].name = name;
+                        savedCategory = this.categories[catIndex];
                     }
                 } else {
                     const newId = `cat-${Date.now()}`;
-                    this.categories.push({ id: newId, name, description: "" });
+                    savedCategory = { id: newId, name, description: "" };
+                    this.categories.push(savedCategory);
                 }
 
                 this.saveToStorage();
+                if (savedCategory) this.syncCategoryToDb(savedCategory);
                 this.init();
                 this.closeCategoryModal();
             }
@@ -1955,6 +2007,7 @@
                     this.categories = this.categories.filter(c => c.id !== id);
                     this.activeCategoryId = "";
                     this.saveToStorage();
+                    this.syncCategoryToDb({ id }, 'delete');
                     this.init();
                     this.closeCategoryModal();
                 }
@@ -2005,18 +2058,22 @@
                 const notes = document.getElementById("item-notes").value.trim();
                 const location = document.getElementById("item-location").value.trim();
                 const rating = this.modalSelectedRating;
+                let savedItem = null;
 
                 if (id) {
                     const itemIndex = this.items.findIndex(i => i.id === id);
                     if (itemIndex !== -1) {
-                        this.items[itemIndex] = { id, name, categoryId, notes, location, rating };
+                        savedItem = { id, name, categoryId, notes, location, rating };
+                        this.items[itemIndex] = savedItem;
                     }
                 } else {
                     const newId = `item-${Date.now()}`;
-                    this.items.push({ id: newId, name, categoryId, notes, location, rating });
+                    savedItem = { id: newId, name, categoryId, notes, location, rating };
+                    this.items.push(savedItem);
                 }
 
                 this.saveToStorage();
+                if (savedItem) this.syncItemToDb(savedItem);
                 this.hideTooltip();
                 this.init();
                 this.closeItemModal();
@@ -2026,6 +2083,7 @@
                 if (confirm("Remove this food item?")) {
                     this.items = this.items.filter(i => i.id !== id);
                     this.saveToStorage();
+                    this.syncItemToDb({ id }, 'delete');
                     this.hideTooltip();
                     this.init();
                 }
@@ -2079,6 +2137,339 @@
                     }
                 };
                 reader.readAsText(file);
+            }
+
+            /* --- Supabase Cloud Sync Methods --- */
+
+            initSupabase() {
+                const defaultUrl = "https://ywcpsbzdrjykghfbbxmg.supabase.co";
+                const defaultKey = "sb_publishable_Juf-bm6u3pkKVt0T7jNdAw_EJDNqKjC";
+                const url = localStorage.getItem("gl-supabase-url") || defaultUrl;
+                const key = localStorage.getItem("gl-supabase-key") || defaultKey;
+
+                if (url && key && window.supabase) {
+                    try {
+                        this.supabase = window.supabase.createClient(url, key);
+                        this.updateSupabaseIndicator('connected');
+                        this.pullFromSupabase(true);
+                    } catch (e) {
+                        console.error("Failed to initialize Supabase:", e);
+                        this.supabase = null;
+                        this.updateSupabaseIndicator('error', 'Init failed');
+                    }
+                } else {
+                    this.supabase = null;
+                    this.updateSupabaseIndicator('disconnected');
+                }
+            }
+
+            updateSupabaseIndicator(status, message) {
+                const dot = document.getElementById("supabase-status-dot");
+                const text = document.getElementById("supabase-status-text");
+                const footerDot = document.getElementById("supabase-footer-dot");
+
+                if (status === 'connected') {
+                    if (dot) dot.style.backgroundColor = '#10b981';
+                    if (text) {
+                        text.innerText = message || 'Connected to Cloud';
+                        text.style.color = '#10b981';
+                    }
+                    if (footerDot) footerDot.style.backgroundColor = '#10b981';
+                } else if (status === 'error') {
+                    if (dot) dot.style.backgroundColor = '#ef4444';
+                    if (text) {
+                        text.innerText = message || 'Connection Error';
+                        text.style.color = '#ef4444';
+                    }
+                    if (footerDot) footerDot.style.backgroundColor = '#ef4444';
+                } else {
+                    if (dot) dot.style.backgroundColor = 'var(--text-muted)';
+                    if (text) {
+                        text.innerText = message || 'Not Connected';
+                        text.style.color = 'var(--text-muted)';
+                    }
+                    if (footerDot) footerDot.style.backgroundColor = 'var(--text-muted)';
+                }
+            }
+
+            openSupabaseModal() {
+                const modal = document.getElementById("supabase-modal");
+                const urlInput = document.getElementById("supabase-url");
+                const keyInput = document.getElementById("supabase-key");
+
+                const defaultUrl = "https://ywcpsbzdrjykghfbbxmg.supabase.co";
+                const defaultKey = "sb_publishable_Juf-bm6u3pkKVt0T7jNdAw_EJDNqKjC";
+
+                urlInput.value = localStorage.getItem("gl-supabase-url") || defaultUrl;
+                keyInput.value = localStorage.getItem("gl-supabase-key") || defaultKey;
+
+                this.updateSupabaseIndicator(this.supabase ? 'connected' : 'disconnected');
+                modal.classList.add("active");
+            }
+
+            closeSupabaseModal() {
+                document.getElementById("supabase-modal").classList.remove("active");
+            }
+
+            saveSupabaseConfig(event) {
+                event.preventDefault();
+                const url = document.getElementById("supabase-url").value.trim();
+                const key = document.getElementById("supabase-key").value.trim();
+
+                if (!url || !key) {
+                    alert("Please provide both Supabase Project URL and API Key.");
+                    return;
+                }
+
+                localStorage.setItem("gl-supabase-url", url);
+                localStorage.setItem("gl-supabase-key", key);
+
+                this.initSupabase();
+                this.closeSupabaseModal();
+            }
+
+            disconnectSupabase() {
+                if (confirm("Disconnect Supabase cloud sync? Your local data will be preserved.")) {
+                    localStorage.removeItem("gl-supabase-url");
+                    localStorage.removeItem("gl-supabase-key");
+                    this.supabase = null;
+                    document.getElementById("supabase-url").value = "";
+                    document.getElementById("supabase-key").value = "";
+                    this.updateSupabaseIndicator('disconnected');
+                    this.closeSupabaseModal();
+                }
+            }
+
+            async testSupabaseConnection() {
+                const url = document.getElementById("supabase-url").value.trim();
+                const key = document.getElementById("supabase-key").value.trim();
+
+                if (!url || !key) {
+                    alert("Please enter both URL and Anon Key first.");
+                    return;
+                }
+
+                try {
+                    this.updateSupabaseIndicator('disconnected', 'Testing connection...');
+                    const testClient = window.supabase.createClient(url, key);
+                    const { error } = await testClient.from('categories').select('id').limit(1);
+                    
+                    if (error) {
+                        throw error;
+                    }
+
+                    localStorage.setItem("gl-supabase-url", url);
+                    localStorage.setItem("gl-supabase-key", key);
+                    this.supabase = testClient;
+                    this.updateSupabaseIndicator('connected', 'Connected!');
+                    await this.pullFromSupabase(false);
+                } catch (err) {
+                    console.error("Supabase test error:", err);
+                    this.updateSupabaseIndicator('error', err.message || 'Connection failed');
+                    alert(`Connection test failed: ${err.message || 'Check URL/Key or verify tables are created in Supabase.'}`);
+                }
+            }
+
+            copySupabaseSQL() {
+                const sql = `-- Run this in your Supabase SQL Editor:
+
+-- 1. Create categories table
+create table if not exists categories (
+  id text primary key,
+  name text not null,
+  description text default '',
+  created_at timestamptz default now()
+);
+
+-- 2. Create items table
+create table if not exists items (
+  id text primary key,
+  name text not null,
+  category_id text references categories(id) on delete cascade,
+  rating text not null check (rating in ('good', 'okay', 'bad')),
+  location text default '',
+  notes text default '',
+  created_at timestamptz default now()
+);
+
+-- 3. Create health_selected table (for tracking healthy food portions)
+create table if not exists health_selected (
+  id text primary key default 'user_portions',
+  data jsonb default '{}'::jsonb,
+  updated_at timestamptz default now()
+);
+
+-- 4. Enable Row Level Security (RLS) & allow anonymous public read/write access
+alter table categories enable row level security;
+alter table items enable row level security;
+alter table health_selected enable row level security;
+
+create policy "Allow public read/write categories" on categories for all using (true) with check (true);
+create policy "Allow public read/write items" on items for all using (true) with check (true);
+create policy "Allow public read/write health_selected" on health_selected for all using (true) with check (true);
+`;
+                navigator.clipboard.writeText(sql).then(() => {
+                    alert("SQL setup script copied to clipboard! Paste and run it in your Supabase SQL Editor.");
+                }).catch(() => {
+                    prompt("Copy the SQL setup script below:", sql);
+                });
+            }
+
+            async pullFromSupabase(silent = false) {
+                if (!this.supabase) return;
+
+                try {
+                    const [catRes, itemRes, healthRes] = await Promise.all([
+                        this.supabase.from('categories').select('*').order('name'),
+                        this.supabase.from('items').select('*'),
+                        this.supabase.from('health_selected').select('data').eq('id', 'user_portions').maybeSingle()
+                    ]);
+
+                    if (catRes.error) throw catRes.error;
+                    if (itemRes.error) throw itemRes.error;
+
+                    if (catRes.data && catRes.data.length > 0) {
+                        this.categories = catRes.data.map(c => ({ id: c.id, name: c.name, description: c.description || '' }));
+                    }
+
+                    if (itemRes.data && itemRes.data.length > 0) {
+                        this.items = itemRes.data.map(i => ({
+                            id: i.id,
+                            name: i.name,
+                            categoryId: i.category_id || i.categoryId,
+                            rating: i.rating,
+                            location: i.location || '',
+                            notes: i.notes || ''
+                        }));
+                    }
+
+                    if (healthRes.data && healthRes.data.data) {
+                        this.healthSelected = healthRes.data.data;
+                        localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
+                    }
+
+                    this.saveToStorage();
+                    this.renderCategories();
+                    this.renderActiveCategoryInfo();
+                    this.renderItems();
+                    this.populateCategoryDropdown();
+                    this.renderHealthyFoods();
+                    this.updateHealthCalculator();
+                    this.updateSupabaseIndicator('connected', 'Synced with Cloud');
+
+                    if (!silent) {
+                        alert("Data successfully synchronized from Supabase cloud!");
+                    }
+                } catch (err) {
+                    console.error("Error pulling from Supabase:", err);
+                    this.updateSupabaseIndicator('error', err.message);
+                    if (!silent) {
+                        alert(`Failed to sync from cloud: ${err.message}`);
+                    }
+                }
+            }
+
+            async pushLocalToSupabase() {
+                if (!this.supabase) {
+                    alert("Please connect to Supabase first.");
+                    return;
+                }
+
+                if (!confirm("Upload your local categories, items, and portion settings to Supabase? This will overwrite or merge into cloud tables.")) {
+                    return;
+                }
+
+                try {
+                    this.updateSupabaseIndicator('connected', 'Uploading data...');
+
+                    // 1. Upsert categories
+                    if (this.categories.length > 0) {
+                        const { error: catErr } = await this.supabase.from('categories').upsert(
+                            this.categories.map(c => ({ id: c.id, name: c.name, description: c.description || '' }))
+                        );
+                        if (catErr) throw catErr;
+                    }
+
+                    // 2. Upsert items
+                    if (this.items.length > 0) {
+                        const { error: itemErr } = await this.supabase.from('items').upsert(
+                            this.items.map(i => ({
+                                id: i.id,
+                                name: i.name,
+                                category_id: i.categoryId,
+                                rating: i.rating,
+                                location: i.location || '',
+                                notes: i.notes || ''
+                            }))
+                        );
+                        if (itemErr) throw itemErr;
+                    }
+
+                    // 3. Upsert health selected
+                    const { error: healthErr } = await this.supabase.from('health_selected').upsert({
+                        id: 'user_portions',
+                        data: this.healthSelected,
+                        updated_at: new Date().toISOString()
+                    });
+                    if (healthErr) throw healthErr;
+
+                    this.updateSupabaseIndicator('connected', 'Uploaded & Synced');
+                    alert("Local data successfully pushed to Supabase cloud tables!");
+                } catch (err) {
+                    console.error("Error pushing to Supabase:", err);
+                    this.updateSupabaseIndicator('error', err.message);
+                    alert(`Failed to push data to Supabase: ${err.message}`);
+                }
+            }
+
+            async syncCategoryToDb(category, action = 'upsert') {
+                if (!this.supabase) return;
+                try {
+                    if (action === 'delete') {
+                        await this.supabase.from('categories').delete().eq('id', category.id);
+                    } else {
+                        await this.supabase.from('categories').upsert({
+                            id: category.id,
+                            name: category.name,
+                            description: category.description || ''
+                        });
+                    }
+                } catch (e) {
+                    console.warn("Supabase background category sync error:", e);
+                }
+            }
+
+            async syncItemToDb(item, action = 'upsert') {
+                if (!this.supabase) return;
+                try {
+                    if (action === 'delete') {
+                        await this.supabase.from('items').delete().eq('id', item.id);
+                    } else {
+                        await this.supabase.from('items').upsert({
+                            id: item.id,
+                            name: item.name,
+                            category_id: item.categoryId,
+                            rating: item.rating,
+                            location: item.location || '',
+                            notes: item.notes || ''
+                        });
+                    }
+                } catch (e) {
+                    console.warn("Supabase background item sync error:", e);
+                }
+            }
+
+            async syncHealthToDb() {
+                if (!this.supabase) return;
+                try {
+                    await this.supabase.from('health_selected').upsert({
+                        id: 'user_portions',
+                        data: this.healthSelected,
+                        updated_at: new Date().toISOString()
+                    });
+                } catch (e) {
+                    console.warn("Supabase background health portion sync error:", e);
+                }
             }
         }
 
