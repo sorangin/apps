@@ -11,6 +11,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- App Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2309090b'/><text x='50' y='68' font-size='56' text-anchor='middle'>🍽️</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2309090b'/><text x='50' y='68' font-size='56' text-anchor='middle'>🍽️</text></svg>">
+    
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
@@ -57,16 +61,22 @@
             padding: 0;
         }
 
+        html, body {
+            height: 100%;
+            height: 100dvh;
+            width: 100%;
+            overflow: hidden;
+        }
+
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-app);
             color: var(--text-main);
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
             transition: background-color 0.2s, color 0.2s;
-            overflow: hidden;
             letter-spacing: -0.01em;
+            -webkit-text-size-adjust: 100%;
         }
 
         ::-webkit-scrollbar {
@@ -488,14 +498,17 @@
             word-break: break-word;
         }
 
-        /* Main Workspace Content (Kanban / Grid) */
+        /* Main Workspace Content (Kanban / Grid / Health) */
         .dashboard-content {
             padding: 12px;
-            flex: 1;
+            flex: 1 1 auto;
             overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior-y: contain;
             min-height: 0;
-            display: flex;
-            flex-direction: column;
+            display: block;
         }
 
         /* Ultra Compact Flex Board for dynamic visible columns */
@@ -503,7 +516,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            align-items: start;
+            align-items: flex-start;
         }
 
         .kanban-column {
@@ -849,16 +862,193 @@
             justify-content: flex-end;
             gap: 6px;
         }
+
+        /* Mobile Hamburger Button */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            border-radius: var(--radius-card);
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-app);
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+
+        .mobile-menu-btn:hover {
+            background-color: var(--bg-hover);
+        }
+
+        /* Sidebar Backdrop for Mobile */
+        #sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(2px);
+            z-index: 998;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+        }
+
+        #sidebar-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Full Mobile Responsiveness & Touch Scroll Engine */
+        @media (max-width: 768px) {
+            .main-workspace {
+                height: 100%;
+                height: 100dvh;
+                width: 100%;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .mobile-menu-btn {
+                display: inline-flex;
+            }
+
+            #sidebar-backdrop {
+                display: block;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 270px;
+                max-width: 82vw;
+                height: 100%;
+                height: 100dvh;
+                z-index: 999;
+                transform: translateX(-100%);
+                transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 6px 0 30px rgba(0, 0, 0, 0.7);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .content-area {
+                width: 100%;
+                height: 100%;
+                height: 100dvh;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                min-width: 0;
+                overflow: hidden;
+                position: relative;
+            }
+
+            .content-subheader {
+                padding: 0 10px;
+                gap: 8px;
+                height: 44px;
+                flex-shrink: 0;
+            }
+
+            .category-title-area h2 {
+                font-size: 13px;
+                max-width: 130px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .search-container {
+                width: 90px;
+            }
+
+            .search-container:focus-within {
+                width: 130px;
+            }
+
+            .dashboard-content {
+                padding: 10px;
+                padding-bottom: 120px !important;
+                overflow-y: scroll !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: pan-y !important;
+                overscroll-behavior-y: contain;
+                flex: 1 1 auto;
+                min-height: 0;
+                height: calc(100dvh - 44px);
+                box-sizing: border-box;
+            }
+
+            /* Stack Kanban Columns on Mobile with full page scrolling */
+            .kanban-board {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 14px !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: min-content !important;
+            }
+
+            .kanban-column {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: none !important;
+                height: auto !important;
+                flex: none !important;
+                overflow: visible !important;
+            }
+
+            .kanban-column-list {
+                max-height: none !important;
+                overflow: visible !important;
+                height: auto !important;
+                min-height: 20px !important;
+                touch-action: pan-y !important;
+            }
+
+            .food-card {
+                touch-action: pan-y !important;
+                -webkit-touch-callout: none;
+            }
+
+            .floating-add-btn {
+                bottom: 18px;
+                right: 18px;
+                width: 48px;
+                height: 48px;
+            }
+
+            #health-categories-grid {
+                grid-template-columns: 1fr !important;
+                padding-bottom: 40px;
+            }
+
+            .grid-container {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+                padding-bottom: 40px;
+            }
+        }
     </style>
 </head>
 <body>
 
 
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="sidebar-backdrop" onclick="app.closeMobileSidebar()"></div>
+
     <!-- Main App Workspace -->
     <div class="main-workspace">
         
         <!-- Sidebar Navigation -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="app-sidebar">
             <!-- Sidebar Brand Header -->
             <div style="padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background-color: var(--bg-panel);">
                 <div class="logo-icon">FL</div>
@@ -913,8 +1103,13 @@
             
             <!-- Category Title & View Selector -->
             <div class="content-subheader">
-                <div class="category-title-area">
-                    <h2 id="active-category-title">Loading...</h2>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="mobile-menu-btn" onclick="app.toggleMobileSidebar()" title="Toggle Menu" aria-label="Toggle Menu">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path></svg>
+                    </button>
+                    <div class="category-title-area">
+                        <h2 id="active-category-title">Loading...</h2>
+                    </div>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -1026,8 +1221,7 @@
                     </div>
 
                     <div style="display: flex; gap: 8px; margin-top: 2px;">
-                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; height: 32px;" onclick="app.testSupabaseConnection()">🔌 Test & Pull Data</button>
-                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; height: 32px;" onclick="app.pushLocalToSupabase()">⬆️ Push Local to Cloud</button>
+                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; height: 32px;" onclick="app.testSupabaseConnection()">🔌 Test Connection</button>
                     </div>
 
                     <div style="margin-top: 4px; border-top: 1px solid var(--border); padding-top: 10px;">
@@ -1500,8 +1694,30 @@
                 container.innerHTML = html;
             }
 
+            toggleMobileSidebar() {
+                const sidebar = document.getElementById("app-sidebar");
+                const backdrop = document.getElementById("sidebar-backdrop");
+                if (sidebar) {
+                    const isOpen = sidebar.classList.contains("mobile-open");
+                    if (isOpen) {
+                        this.closeMobileSidebar();
+                    } else {
+                        sidebar.classList.add("mobile-open");
+                        if (backdrop) backdrop.classList.add("active");
+                    }
+                }
+            }
+
+            closeMobileSidebar() {
+                const sidebar = document.getElementById("app-sidebar");
+                const backdrop = document.getElementById("sidebar-backdrop");
+                if (sidebar) sidebar.classList.remove("mobile-open");
+                if (backdrop) backdrop.classList.remove("active");
+            }
+
             setActiveCategory(catId) {
                 this.currentSection = "ledger";
+                this.closeMobileSidebar();
                 
                 const tab = document.getElementById("tab-health-guide");
                 if (tab) {
@@ -1542,6 +1758,7 @@
 
             setSection(sectionName) {
                 this.currentSection = sectionName;
+                this.closeMobileSidebar();
                 if (sectionName === "health") {
                     this.activeCategoryId = "";
                     
@@ -1950,6 +2167,7 @@
             }
 
             openCategoryModal(catId = null) {
+                this.closeMobileSidebar();
                 const modal = document.getElementById("category-modal");
                 const title = document.getElementById("category-modal-title");
                 const deleteBtn = document.getElementById("delete-category-btn");
@@ -2014,6 +2232,7 @@
             }
 
             openItemModal(itemId = null) {
+                this.closeMobileSidebar();
                 const modal = document.getElementById("item-modal");
                 const title = document.getElementById("item-modal-title");
                 
@@ -2193,6 +2412,7 @@
             }
 
             openSupabaseModal() {
+                this.closeMobileSidebar();
                 const modal = document.getElementById("supabase-modal");
                 const urlInput = document.getElementById("supabase-url");
                 const keyInput = document.getElementById("supabase-key");
@@ -2330,35 +2550,40 @@ create policy "Allow public read/write health_selected" on health_selected for a
 
                     if (catRes.data && catRes.data.length > 0) {
                         this.categories = catRes.data.map(c => ({ id: c.id, name: c.name, description: c.description || '' }));
-                    }
 
-                    if (itemRes.data && itemRes.data.length > 0) {
-                        this.items = itemRes.data.map(i => ({
-                            id: i.id,
-                            name: i.name,
-                            categoryId: i.category_id || i.categoryId,
-                            rating: i.rating,
-                            location: i.location || '',
-                            notes: i.notes || ''
-                        }));
-                    }
+                        if (itemRes.data && itemRes.data.length > 0) {
+                            this.items = itemRes.data.map(i => ({
+                                id: i.id,
+                                name: i.name,
+                                categoryId: i.category_id || i.categoryId,
+                                rating: i.rating,
+                                location: i.location || '',
+                                notes: i.notes || ''
+                            }));
+                        } else {
+                            this.items = [];
+                        }
 
-                    if (healthRes.data && healthRes.data.data) {
-                        this.healthSelected = healthRes.data.data;
-                        localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
-                    }
+                        if (healthRes.data && healthRes.data.data) {
+                            this.healthSelected = healthRes.data.data;
+                            localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
+                        }
 
-                    this.saveToStorage();
-                    this.renderCategories();
-                    this.renderActiveCategoryInfo();
-                    this.renderItems();
-                    this.populateCategoryDropdown();
-                    this.renderHealthyFoods();
-                    this.updateHealthCalculator();
-                    this.updateSupabaseIndicator('connected', 'Synced with Cloud');
+                        this.saveToStorage();
+                        this.renderCategories();
+                        this.renderActiveCategoryInfo();
+                        this.renderItems();
+                        this.populateCategoryDropdown();
+                        this.renderHealthyFoods();
+                        this.updateHealthCalculator();
+                        this.updateSupabaseIndicator('connected', 'Synced with Cloud');
 
-                    if (!silent) {
-                        alert("Data successfully synchronized from Supabase cloud!");
+                        if (!silent) {
+                            alert("Data successfully synchronized from Supabase cloud!");
+                        }
+                    } else if (this.categories && this.categories.length > 0) {
+                        // Supabase tables are empty, automatically seed cloud database from local items!
+                        await this.pushLocalToSupabase(true);
                     }
                 } catch (err) {
                     console.error("Error pulling from Supabase:", err);
@@ -2369,18 +2594,18 @@ create policy "Allow public read/write health_selected" on health_selected for a
                 }
             }
 
-            async pushLocalToSupabase() {
+            async pushLocalToSupabase(silent = false) {
                 if (!this.supabase) {
-                    alert("Please connect to Supabase first.");
+                    if (!silent) alert("Please connect to Supabase first.");
                     return;
                 }
 
-                if (!confirm("Upload your local categories, items, and portion settings to Supabase? This will overwrite or merge into cloud tables.")) {
+                if (!silent && !confirm("Upload your local categories, items, and portion settings to Supabase? This will overwrite or merge into cloud tables.")) {
                     return;
                 }
 
                 try {
-                    this.updateSupabaseIndicator('connected', 'Uploading data...');
+                    this.updateSupabaseIndicator('connected', 'Auto-syncing to cloud...');
 
                     // 1. Upsert categories
                     if (this.categories.length > 0) {
@@ -2413,12 +2638,16 @@ create policy "Allow public read/write health_selected" on health_selected for a
                     });
                     if (healthErr) throw healthErr;
 
-                    this.updateSupabaseIndicator('connected', 'Uploaded & Synced');
-                    alert("Local data successfully pushed to Supabase cloud tables!");
+                    this.updateSupabaseIndicator('connected', 'Synced with Cloud');
+                    if (!silent) {
+                        alert("Local data successfully pushed to Supabase cloud tables!");
+                    }
                 } catch (err) {
                     console.error("Error pushing to Supabase:", err);
                     this.updateSupabaseIndicator('error', err.message);
-                    alert(`Failed to push data to Supabase: ${err.message}`);
+                    if (!silent) {
+                        alert(`Failed to push data to Supabase: ${err.message}`);
+                    }
                 }
             }
 
