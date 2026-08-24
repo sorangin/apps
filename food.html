@@ -1050,10 +1050,16 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="app-sidebar">
             <!-- Sidebar Brand Header -->
-            <div style="padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background-color: var(--bg-panel);">
-                <div class="logo-icon">FL</div>
-                <div class="logo-text">
-                    <h1 style="font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif;">Food Ledger</h1>
+            <div style="padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-panel);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="logo-icon">FL</div>
+                    <div class="logo-text">
+                        <h1 style="font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif;">Food Ledger</h1>
+                    </div>
+                </div>
+                <!-- Subtle Live Cloud Sync Indicator -->
+                <div id="cloud-sync-badge" title="Cloud Sync Active" style="display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; cursor: default;">
+                    <span id="supabase-live-dot" style="width: 7px; height: 7px; border-radius: 50%; background-color: var(--text-muted); box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); transition: background-color 0.3s ease;"></span>
                 </div>
             </div>
             
@@ -1082,16 +1088,12 @@
                 </div>
             </div>
 
-            <!-- Import/Export & Cloud Footer -->
+            <!-- Import/Export Footer -->
             <div class="sidebar-footer">
-                <button class="btn btn-secondary" onclick="app.openSupabaseModal()" title="Supabase Cloud Sync" id="supabase-sync-btn" style="position: relative;">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
-                    <span id="supabase-footer-dot" style="position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background-color: var(--text-muted); display: block;"></span>
-                </button>
-                <button class="btn btn-secondary" onclick="app.exportData()" title="Export Backup JSON">
+                <button class="btn btn-secondary" onclick="app.exportData()" title="Export Backup JSON" style="flex: 1; justify-content: center;">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 </button>
-                <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" title="Import Backup JSON">
+                <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" title="Import Backup JSON" style="flex: 1; justify-content: center;">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                 </button>
                 <input type="file" id="import-file" style="display: none;" accept=".json" onchange="app.importData(event)">
@@ -1192,56 +1194,6 @@
     </div>
 
     <!-- Modals -->
-
-    <!-- Supabase Cloud Sync Modal -->
-    <div id="supabase-modal" class="modal-overlay">
-        <div class="modal-card" style="max-width: 480px;">
-            <div class="modal-header">
-                <h3 style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" fill="none" stroke="#3ecf8e" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
-                    <span>Supabase Cloud Sync</span>
-                </h3>
-                <button class="modal-close-btn" onclick="app.closeSupabaseModal()">&times;</button>
-            </div>
-            <form onsubmit="app.saveSupabaseConfig(event)">
-                <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
-                    <div id="supabase-status-indicator" style="padding: 9px 12px; border-radius: var(--radius-card); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; background: var(--bg-hover); border: 1px solid var(--border);">
-                        <span>Connection: <span id="supabase-status-text" style="color: var(--text-muted);">Not Connected</span></span>
-                        <span id="supabase-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--text-muted); display: inline-block;"></span>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="supabase-url" class="form-label">Project URL</label>
-                        <input type="url" id="supabase-url" class="form-control" placeholder="https://xyzcompany.supabase.co" autocomplete="off" style="font-family: monospace; font-size: 11px;">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="supabase-key" class="form-label">Anon / Public API Key</label>
-                        <input type="password" id="supabase-key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsIn..." autocomplete="off" style="font-family: monospace; font-size: 11px;">
-                    </div>
-
-                    <div style="display: flex; gap: 8px; margin-top: 2px;">
-                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; height: 32px;" onclick="app.testSupabaseConnection()">🔌 Test Connection</button>
-                    </div>
-
-                    <div style="margin-top: 4px; border-top: 1px solid var(--border); padding-top: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 11px; font-weight: 600; color: var(--text-main);">Database Setup SQL</span>
-                            <button type="button" class="btn btn-secondary" style="height: 22px; font-size: 10px; padding: 0 8px;" onclick="app.copySupabaseSQL()">📋 Copy SQL Script</button>
-                        </div>
-                        <p style="font-size: 10px; color: var(--text-sub); line-height: 1.4;">
-                            Run the SQL script once in your Supabase project's SQL Editor to create the <code>categories</code>, <code>items</code>, and <code>health_selected</code> tables with anonymous policies.
-                        </p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="app.closeSupabaseModal()">Close</button>
-                    <button type="button" class="btn" style="background-color: var(--bad-bg); border-color: var(--bad-border); color: var(--bad-dot);" onclick="app.disconnectSupabase()">Disconnect</button>
-                    <button type="submit" class="btn btn-primary">Save & Connect</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- Category Modal -->
     <div id="category-modal" class="modal-overlay">
@@ -2383,156 +2335,28 @@
             }
 
             updateSupabaseIndicator(status, message) {
-                const dot = document.getElementById("supabase-status-dot");
-                const text = document.getElementById("supabase-status-text");
-                const footerDot = document.getElementById("supabase-footer-dot");
+                const liveDot = document.getElementById("supabase-live-dot");
+                const badge = document.getElementById("cloud-sync-badge");
 
                 if (status === 'connected') {
-                    if (dot) dot.style.backgroundColor = '#10b981';
-                    if (text) {
-                        text.innerText = message || 'Connected to Cloud';
-                        text.style.color = '#10b981';
+                    if (liveDot) {
+                        liveDot.style.backgroundColor = '#10b981';
+                        liveDot.style.boxShadow = '0 0 8px rgba(16, 185, 129, 0.6)';
                     }
-                    if (footerDot) footerDot.style.backgroundColor = '#10b981';
+                    if (badge) badge.title = message || 'Cloud Sync Active (Connected to Supabase)';
                 } else if (status === 'error') {
-                    if (dot) dot.style.backgroundColor = '#ef4444';
-                    if (text) {
-                        text.innerText = message || 'Connection Error';
-                        text.style.color = '#ef4444';
+                    if (liveDot) {
+                        liveDot.style.backgroundColor = '#ef4444';
+                        liveDot.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
                     }
-                    if (footerDot) footerDot.style.backgroundColor = '#ef4444';
+                    if (badge) badge.title = message || 'Cloud Sync Error';
                 } else {
-                    if (dot) dot.style.backgroundColor = 'var(--text-muted)';
-                    if (text) {
-                        text.innerText = message || 'Not Connected';
-                        text.style.color = 'var(--text-muted)';
+                    if (liveDot) {
+                        liveDot.style.backgroundColor = 'var(--text-muted)';
+                        liveDot.style.boxShadow = 'none';
                     }
-                    if (footerDot) footerDot.style.backgroundColor = 'var(--text-muted)';
+                    if (badge) badge.title = message || 'Cloud Sync Offline';
                 }
-            }
-
-            openSupabaseModal() {
-                this.closeMobileSidebar();
-                const modal = document.getElementById("supabase-modal");
-                const urlInput = document.getElementById("supabase-url");
-                const keyInput = document.getElementById("supabase-key");
-
-                const defaultUrl = "https://ywcpsbzdrjykghfbbxmg.supabase.co";
-                const defaultKey = "sb_publishable_Juf-bm6u3pkKVt0T7jNdAw_EJDNqKjC";
-
-                urlInput.value = localStorage.getItem("gl-supabase-url") || defaultUrl;
-                keyInput.value = localStorage.getItem("gl-supabase-key") || defaultKey;
-
-                this.updateSupabaseIndicator(this.supabase ? 'connected' : 'disconnected');
-                modal.classList.add("active");
-            }
-
-            closeSupabaseModal() {
-                document.getElementById("supabase-modal").classList.remove("active");
-            }
-
-            saveSupabaseConfig(event) {
-                event.preventDefault();
-                const url = document.getElementById("supabase-url").value.trim();
-                const key = document.getElementById("supabase-key").value.trim();
-
-                if (!url || !key) {
-                    alert("Please provide both Supabase Project URL and API Key.");
-                    return;
-                }
-
-                localStorage.setItem("gl-supabase-url", url);
-                localStorage.setItem("gl-supabase-key", key);
-
-                this.initSupabase();
-                this.closeSupabaseModal();
-            }
-
-            disconnectSupabase() {
-                if (confirm("Disconnect Supabase cloud sync? Your local data will be preserved.")) {
-                    localStorage.removeItem("gl-supabase-url");
-                    localStorage.removeItem("gl-supabase-key");
-                    this.supabase = null;
-                    document.getElementById("supabase-url").value = "";
-                    document.getElementById("supabase-key").value = "";
-                    this.updateSupabaseIndicator('disconnected');
-                    this.closeSupabaseModal();
-                }
-            }
-
-            async testSupabaseConnection() {
-                const url = document.getElementById("supabase-url").value.trim();
-                const key = document.getElementById("supabase-key").value.trim();
-
-                if (!url || !key) {
-                    alert("Please enter both URL and Anon Key first.");
-                    return;
-                }
-
-                try {
-                    this.updateSupabaseIndicator('disconnected', 'Testing connection...');
-                    const testClient = window.supabase.createClient(url, key);
-                    const { error } = await testClient.from('categories').select('id').limit(1);
-                    
-                    if (error) {
-                        throw error;
-                    }
-
-                    localStorage.setItem("gl-supabase-url", url);
-                    localStorage.setItem("gl-supabase-key", key);
-                    this.supabase = testClient;
-                    this.updateSupabaseIndicator('connected', 'Connected!');
-                    await this.pullFromSupabase(false);
-                } catch (err) {
-                    console.error("Supabase test error:", err);
-                    this.updateSupabaseIndicator('error', err.message || 'Connection failed');
-                    alert(`Connection test failed: ${err.message || 'Check URL/Key or verify tables are created in Supabase.'}`);
-                }
-            }
-
-            copySupabaseSQL() {
-                const sql = `-- Run this in your Supabase SQL Editor:
-
--- 1. Create categories table
-create table if not exists categories (
-  id text primary key,
-  name text not null,
-  description text default '',
-  created_at timestamptz default now()
-);
-
--- 2. Create items table
-create table if not exists items (
-  id text primary key,
-  name text not null,
-  category_id text references categories(id) on delete cascade,
-  rating text not null check (rating in ('good', 'okay', 'bad')),
-  location text default '',
-  notes text default '',
-  created_at timestamptz default now()
-);
-
--- 3. Create health_selected table (for tracking healthy food portions)
-create table if not exists health_selected (
-  id text primary key default 'user_portions',
-  data jsonb default '{}'::jsonb,
-  updated_at timestamptz default now()
-);
-
--- 4. Enable Row Level Security (RLS) & allow anonymous public read/write access
-alter table categories enable row level security;
-alter table items enable row level security;
-alter table health_selected enable row level security;
-
-create policy "Allow public read/write categories" on categories for all using (true) with check (true);
-create policy "Allow public read/write items" on items for all using (true) with check (true);
-create policy "Allow public read/write health_selected" on health_selected for all using (true) with check (true);
-`;
-                navigator.clipboard.writeText(sql).then(() => {
-                    alert("SQL setup script copied to clipboard! Paste and run it in your Supabase SQL Editor.");
-                }).catch(() => {
-                    prompt("Copy the SQL setup script below:", sql);
-                });
             }
 
             async pullFromSupabase(silent = false) {
