@@ -1061,8 +1061,11 @@
                 padding-bottom: 40px;
             }
 
-            .grid-container {
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+            .cards-grid {
+                display: grid !important;
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+                gap: 8px !important;
+                width: 100% !important;
                 padding-bottom: 40px;
             }
         }
@@ -1094,7 +1097,7 @@
             </div>
             
             <!-- Healthy Foods Section -->
-            <div class="sidebar-section-header" id="tab-health-guide" onclick="app.setSection('health')" onmouseover="app.setSection('health')">
+            <div class="sidebar-section-header" id="tab-health-guide" onclick="app.setSection('health')" onmouseover="app.handleSectionHover('health')">
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <span style="font-size: 14px;">🥗</span>
                     <span>Healthy Foods</span>
@@ -1103,7 +1106,7 @@
             
             <!-- Delicious Foods Section -->
             <div id="delicious-foods-section">
-                <div class="sidebar-section-header" id="delicious-header" onclick="app.navigateToDelicious()" onmouseover="app.navigateToDelicious()">
+                <div class="sidebar-section-header" id="delicious-header" onclick="app.navigateToDelicious()" onmouseover="app.handleDeliciousHover()">
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="font-size: 14px;">🍽️</span>
                         <span>Delicious Foods</span>
@@ -1637,17 +1640,35 @@
                 }
             }
 
+            handleCategoryHover(catId) {
+                if (window.matchMedia('(pointer: fine)').matches) {
+                    this.setActiveCategory(catId);
+                }
+            }
+
+            handleSectionHover(sectionName) {
+                if (window.matchMedia('(pointer: fine)').matches) {
+                    this.setSection(sectionName);
+                }
+            }
+
+            handleDeliciousHover() {
+                if (window.matchMedia('(pointer: fine)').matches) {
+                    this.navigateToDelicious();
+                }
+            }
+
             renderCategories() {
                 const container = document.getElementById("category-list-container");
                 let html = `
                     <div class="category-item ${this.activeCategoryId === 'all' && this.currentSection === 'ledger' ? 'active' : ''}" 
                          data-id="all"
                          onclick="app.setActiveCategory('all')"
-                         onmouseover="app.setActiveCategory('all')">
-                        <span>All Categories</span>
-                        <div class="category-meta">
-                            <span class="category-count">${this.items.length}</span>
-                        </div>
+                         onmouseover="app.handleCategoryHover('all')">
+                         <span>All Categories</span>
+                         <div class="category-meta">
+                             <span class="category-count">${this.items.length}</span>
+                         </div>
                     </div>
                 `;
 
@@ -1661,7 +1682,7 @@
                         <div class="category-item ${isActive ? 'active' : ''}" 
                              data-id="${cat.id}"
                              onclick="app.setActiveCategory('${cat.id}')"
-                             onmouseover="app.setActiveCategory('${cat.id}')">
+                             onmouseover="app.handleCategoryHover('${cat.id}')">
                             <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cat.name}</span>
                             <div class="category-meta">
                                 <span class="category-count">${count}</span>
