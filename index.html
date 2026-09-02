@@ -40,7 +40,7 @@
     }
 
     .container {
-      max-width: 960px;
+      max-width: 1100px;
       margin: 0 auto;
       width: 100%;
     }
@@ -53,30 +53,31 @@
     h1 {
       font-size: 2rem;
       font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-
-    p.subtitle {
-      color: var(--text-muted);
-      font-size: 1rem;
+      letter-spacing: -0.02em;
     }
 
     .apps-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
       gap: 1.25rem;
+    }
+
+    @media (max-width: 600px) {
+      .apps-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .app-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 1.25rem;
+      padding: 1.25rem 1.5rem;
       text-decoration: none;
       color: inherit;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 1.25rem;
       transition: all 0.2s ease;
     }
 
@@ -107,36 +108,27 @@
     .app-title {
       font-size: 1.05rem;
       font-weight: 600;
-      margin-bottom: 0.2rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      margin-bottom: 0.25rem;
+      color: var(--text);
     }
 
     .app-desc {
-      font-size: 0.85rem;
+      font-size: 0.875rem;
       color: var(--text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.4;
     }
 
     .app-arrow {
       color: var(--text-muted);
       font-size: 0.9rem;
+      margin-left: 0.5rem;
       transition: transform 0.2s ease, color 0.2s ease;
+      flex-shrink: 0;
     }
 
     .app-card:hover .app-arrow {
       color: var(--accent);
       transform: translateX(3px);
-    }
-
-    footer {
-      margin-top: 3rem;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.85rem;
     }
   </style>
 </head>
@@ -152,7 +144,7 @@
         <div class="app-icon"><i class="fa-solid fa-chart-pie"></i></div>
         <div class="app-info">
           <div class="app-title">Creator Dashboard</div>
-          <div class="app-desc">Content and project workflow dashboard</div>
+          <div class="app-desc">Project & workflow dashboard</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -161,7 +153,7 @@
         <div class="app-icon"><i class="fa-solid fa-shield-virus"></i></div>
         <div class="app-info">
           <div class="app-title">BioShield: Anatomical RPG</div>
-          <div class="app-desc">Human physiology defense game</div>
+          <div class="app-desc">Body defense tactical game</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -170,7 +162,7 @@
         <div class="app-icon"><i class="fa-solid fa-clapperboard"></i></div>
         <div class="app-info">
           <div class="app-title">Screenwriter</div>
-          <div class="app-desc">Scriptwriting and screenplay studio</div>
+          <div class="app-desc">Screenplay & script editor</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -179,7 +171,7 @@
         <div class="app-icon"><i class="fa-solid fa-heart-pulse"></i></div>
         <div class="app-info">
           <div class="app-title">Lab Results & Health</div>
-          <div class="app-desc">Biomarkers and lab test tracking</div>
+          <div class="app-desc">Lab results & biomarker tracker</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -188,7 +180,7 @@
         <div class="app-icon"><i class="fa-solid fa-utensils"></i></div>
         <div class="app-info">
           <div class="app-title">Food Ledger</div>
-          <div class="app-desc">Nutrition and meal tracker</div>
+          <div class="app-desc">Meal & nutrition tracker</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -206,7 +198,7 @@
         <div class="app-icon"><i class="fa-solid fa-list-check"></i></div>
         <div class="app-info">
           <div class="app-title">To-Do List</div>
-          <div class="app-desc">Task and priority manager</div>
+          <div class="app-desc">Task & priority manager</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -215,7 +207,7 @@
         <div class="app-icon"><i class="fa-solid fa-display"></i></div>
         <div class="app-info">
           <div class="app-title">Screen Recorder</div>
-          <div class="app-desc">In-browser screen and audio capture</div>
+          <div class="app-desc">Screen & audio recorder</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -224,7 +216,7 @@
         <div class="app-icon"><i class="fa-solid fa-microphone-lines"></i></div>
         <div class="app-info">
           <div class="app-title">Voice Recorder</div>
-          <div class="app-desc">Audio voice memo recorder</div>
+          <div class="app-desc">Voice memo & audio recorder</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -233,7 +225,7 @@
         <div class="app-icon"><i class="fa-solid fa-plane-departure"></i></div>
         <div class="app-info">
           <div class="app-title">AeroRoute Itinerary</div>
-          <div class="app-desc">Flight and trip planner</div>
+          <div class="app-desc">Travel & flight planner</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -242,7 +234,7 @@
         <div class="app-icon"><i class="fa-solid fa-kitchen-set"></i></div>
         <div class="app-info">
           <div class="app-title">Recipes</div>
-          <div class="app-desc">Culinary recipes and ingredients</div>
+          <div class="app-desc">Recipe collection & cooking guide</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -251,7 +243,7 @@
         <div class="app-icon"><i class="fa-solid fa-folder-tree"></i></div>
         <div class="app-info">
           <div class="app-title">ChronoFile Organizer</div>
-          <div class="app-desc">Photo and media date sorter</div>
+          <div class="app-desc">Media date sorter & organizer</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
@@ -260,7 +252,7 @@
         <div class="app-icon"><i class="fa-solid fa-id-card"></i></div>
         <div class="app-info">
           <div class="app-title">Media Kit & Portfolio</div>
-          <div class="app-desc">Creator portfolio and partnerships</div>
+          <div class="app-desc">Creator portfolio & media kit</div>
         </div>
         <i class="fa-solid fa-chevron-right app-arrow"></i>
       </a>
