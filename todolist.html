@@ -3627,7 +3627,8 @@
             if (needsFullUpdate) {
                 if (!isShop) {
                     const svg = i.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M20 6L9 17l-5-5"/></svg>' : '';
-                    card.innerHTML = `<div class="chk-box ${i.done ? 'checked' : ''}">${svg}</div><span class="ml-4 flex-1 editable-text text-[14px] font-medium ${i.done ? 'strikethrough' : ''}">${i.text}</span><button class="del ml-2 text-zinc-700 hover:text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>`;
+                    const delBtn = isDailies ? '<button class="del ml-2 text-zinc-700 hover:text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>' : '';
+                    card.innerHTML = `<div class="chk-box ${i.done ? 'checked' : ''}">${svg}</div><span class="ml-4 flex-1 editable-text text-[14px] font-medium ${i.done ? 'strikethrough' : ''}">${i.text}</span>${delBtn}`;
                     const chk = card.querySelector('.chk-box'), txt = card.querySelector('.editable-text');
                     chk.style.borderColor = !i.done ? borderCol + '1a' : '';
                     txt.style.color = !i.done ? taskTextCol : '';
