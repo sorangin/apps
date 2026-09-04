@@ -393,7 +393,7 @@
                 width: 100%;
                 background: #0c0c0d;
                 border-left: 1px solid #1c1c1e;
-                padding: 1rem;
+                padding: 1rem 1.75rem 1rem 1rem;
                 display: flex;
                 flex-direction: column;
                 transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -407,14 +407,10 @@
                 /* Right anchor ensures leftward expansion */
             }
 
-            .notes-edge-trigger {
-                position: absolute;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                width: 40px;
-                z-index: 60;
-                background: transparent;
+            .notes-edge-trigger,
+            .notes-right-trigger {
+                display: none !important;
+                pointer-events: none !important;
             }
 
             .notes-expand-btn {
@@ -439,20 +435,9 @@
                 /* Block clicks unless visible */
             }
 
-            .notes-edge-trigger:hover~.notes-expand-btn,
             .notes-expand-btn:hover {
                 opacity: 1;
                 pointer-events: auto;
-            }
-
-            .notes-right-trigger {
-                position: absolute;
-                right: 0;
-                top: 0;
-                bottom: 0;
-                width: 40px;
-                z-index: 60;
-                background: transparent;
             }
 
             .notes-collapse-btn {
@@ -476,10 +461,15 @@
                 pointer-events: none;
             }
 
-            .notes-right-trigger:hover~.notes-collapse-btn,
             .notes-collapse-btn:hover {
                 opacity: 1;
                 pointer-events: auto;
+            }
+
+            .notes-sidebar.is-selecting .notes-collapse-btn,
+            .notes-sidebar.is-selecting .notes-expand-btn {
+                opacity: 0 !important;
+                pointer-events: none !important;
             }
 
             .notes-sidebar.expanded .notes-expand-btn {
@@ -3262,12 +3252,55 @@
         }
 
         function renderNotes() {
+            if (!window._notesSelectionListenersAttached) {
+                window._notesSelectionListenersAttached = true;
+                let _isNotesMouseDown = false;
+
+                document.addEventListener('mousedown', (e) => {
+                    _isNotesMouseDown = true;
+                    if (e.target.closest('.notes-sidebar') && !e.target.closest('.notes-collapse-btn') && !e.target.closest('.notes-expand-btn')) {
+                        document.querySelectorAll('.notes-sidebar').forEach(sb => sb.classList.add('is-selecting'));
+                        document.querySelectorAll('.notes-collapse-btn').forEach(b => {
+                            b.style.opacity = '0';
+                            b.style.pointerEvents = 'none';
+                        });
+                        document.querySelectorAll('.notes-expand-btn').forEach(b => {
+                            b.style.opacity = '0';
+                            b.style.pointerEvents = 'none';
+                        });
+                    }
+                }, true);
+
+                document.addEventListener('mouseup', () => {
+                    _isNotesMouseDown = false;
+                    setTimeout(() => {
+                        const sel = window.getSelection();
+                        if (!sel || sel.isCollapsed || !sel.toString()) {
+                            document.querySelectorAll('.notes-sidebar').forEach(sb => sb.classList.remove('is-selecting'));
+                        }
+                    }, 100);
+                });
+
+                document.addEventListener('selectionchange', () => {
+                    const sel = window.getSelection();
+                    const activeEl = document.activeElement;
+                    const isNotesActive = activeEl && activeEl.closest && activeEl.closest('.notes-sidebar');
+                    if (isNotesActive && sel && !sel.isCollapsed && sel.toString()) {
+                        document.querySelectorAll('.notes-sidebar').forEach(sb => sb.classList.add('is-selecting'));
+                        document.querySelectorAll('.notes-collapse-btn').forEach(b => {
+                            b.style.opacity = '0';
+                            b.style.pointerEvents = 'none';
+                        });
+                    } else if (!_isNotesMouseDown) {
+                        document.querySelectorAll('.notes-sidebar').forEach(sb => sb.classList.remove('is-selecting'));
+                    }
+                });
+            }
+
             const sidebars = document.querySelectorAll('.notes-sidebar');
             sidebars.forEach(sidebar => {
                 if (!sidebar.querySelector('.notes-textarea')) {
                     sidebar.innerHTML = `
-                        <div class="notes-edge-trigger"></div>
-                        <div class="notes-right-trigger"></div>
                         <button class="notes-expand-btn" title="Expand">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="15 18 9 12 15 6"></polyline>
@@ -3342,6 +3375,7 @@
                     // Mouse movement for buttons
                     sidebar.addEventListener('mousemove', (e) => {
                         const isExpanded = sidebar.classList.contains('expanded');
+                        const isHidden = sidebar.classList.contains('collapsed-hidden');
                         const rect = sidebar.getBoundingClientRect();
                         const y = e.clientY - rect.top;
                         const minY = 40, maxY = rect.height - 40;
@@ -3354,9 +3388,56 @@
                         }
                         // Right Side (Collapse)
                         collapseBtn.style.top = clampedY + 'px';
-                        const isHidden = sidebar.classList.contains('collapsed-hidden');
                         const rot = (isExpanded || isHidden) ? ' rotate(180deg)' : '';
                         collapseBtn.style.transform = `translateY(-50%)${rot}`;
+
+                        // Check if user is pressing mouse, dragging, or selecting text
+                        const sel = window.getSelection();
+                        const hasSelection = sel && !sel.isCollapsed && sel.toString().length > 0;
+                        const isSelecting = e.buttons !== 0 || sidebar.classList.contains('is-selecting') || hasSelection;
+
+                        if (isSelecting) {
+                            collapseBtn.style.opacity = '0';
+                            collapseBtn.style.pointerEvents = 'none';
+                            expandBtn.style.opacity = '0';
+                            expandBtn.style.pointerEvents = 'none';
+                            return;
+                        }
+
+                        // Expand button visibility
+                        const distFromLeft = e.clientX - rect.left;
+                        if (!isExpanded && !isHidden) {
+                            if ((distFromLeft >= -14 && distFromLeft <= 14) || expandBtn.matches(':hover')) {
+                                expandBtn.style.opacity = '1';
+                                expandBtn.style.pointerEvents = 'auto';
+                            } else {
+                                expandBtn.style.opacity = '0';
+                                expandBtn.style.pointerEvents = 'none';
+                            }
+                        }
+
+                        // Collapse button visibility: only at the extreme right edge when calm
+                        const distFromRight = rect.right - e.clientX;
+                        if (!isExpanded && !isHidden) {
+                            if (distFromRight <= 14 || collapseBtn.matches(':hover')) {
+                                collapseBtn.style.opacity = '1';
+                                collapseBtn.style.pointerEvents = 'auto';
+                            } else {
+                                collapseBtn.style.opacity = '0';
+                                collapseBtn.style.pointerEvents = 'none';
+                            }
+                        }
+                    });
+
+                    sidebar.addEventListener('mouseleave', () => {
+                        if (!expandBtn.matches(':hover')) {
+                            expandBtn.style.opacity = '0';
+                            expandBtn.style.pointerEvents = 'none';
+                        }
+                        if (!collapseBtn.matches(':hover')) {
+                            collapseBtn.style.opacity = '0';
+                            collapseBtn.style.pointerEvents = 'none';
+                        }
                     });
                 }
             });
