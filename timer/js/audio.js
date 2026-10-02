@@ -46,10 +46,18 @@ const AudioMgr = {
     },
 
     playDefaultBeep() {
+        let beepCount = 0;
+        const maxBeeps = 10;
         const playNoise = () => {
             if (!this.ctx) return;
             if (this.ctx.state === 'suspended') {
                 this.ctx.resume().catch(e => console.warn('Ctx resume failed', e));
+            }
+            beepCount++;
+            if (beepCount > maxBeeps) {
+                this.stopSound();
+                if (this.onSoundDone) this.onSoundDone();
+                return;
             }
             const t = this.ctx.currentTime;
             const o = this.ctx.createOscillator(); const g = this.ctx.createGain();

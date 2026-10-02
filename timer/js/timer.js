@@ -190,9 +190,10 @@ const Timer = {
         this.stop();
         this.container.classList.add('finished');
         Background.sendNotification("Timer Finished", "Your countdown has ended.");
+        AudioMgr.onSoundDone = () => { this.resetAfterFinish(); };
         AudioMgr.startSound();
         if (this.completeTimeout) clearTimeout(this.completeTimeout);
-        this.completeTimeout = setTimeout(() => { this.resetAfterFinish(); }, 60000);
+        this.completeTimeout = setTimeout(() => { this.resetAfterFinish(); }, 15000);
     },
 
     resetAfterFinish() {
@@ -200,6 +201,7 @@ const Timer = {
             clearTimeout(this.completeTimeout);
             this.completeTimeout = null;
         }
+        AudioMgr.onSoundDone = null;
         AudioMgr.stopSound();
         Background.stopPersistence();
         this.container.classList.remove('finished');
