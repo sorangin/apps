@@ -2135,6 +2135,7 @@
 
         const SB_URL = "https://sbhxqpymyxpxocwnngun.supabase.co", SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiaHhxcHlteXhweG9jd25uZ3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0MjI5NzAsImV4cCI6MjA4Mjk5ODk3MH0.RxtlRPzMaib2_EWxIzHajObzyHxqo0sA66eIWDYk620";
         let supabaseClient = null;
+        let realtimeChannel = null;
         function initSupabase() {
             if (!supabaseClient && typeof supabase !== 'undefined') {
                 supabaseClient = supabase.createClient(SB_URL, SB_KEY);
@@ -2438,6 +2439,12 @@
                 while (!initSupabase() && retries < 50) { await new Promise(r => setTimeout(r, 100)); retries++; }
                 if (!supabaseClient) { console.warn('Supabase not available, running offline'); updateStatus(false); return; }
 
+                // Check for auth callback / tokens in URL (e.g. from email confirmation link)
+                const hasAuthCallback = window.location.hash?.includes('access_token=') || 
+                                        window.location.search?.includes('code=') ||
+                                        window.location.hash?.includes('type=signup') ||
+                                        window.location.hash?.includes('type=recovery');
+
                 // Check for existing authenticated session
                 try {
                     const { data: { session } } = await supabaseClient.auth.getSession();
@@ -2453,6 +2460,10 @@
                             await pullFromCloud();
                         }
                         subscribeRealtime();
+                        // Clean URL hash/search if coming from email confirmation
+                        if (hasAuthCallback && window.history.replaceState) {
+                            window.history.replaceState(null, '', window.location.pathname);
+                        }
                     } else if (syncID) {
                         if (pendingSync && isOnline) {
                             await pushToCloud();
@@ -2460,7 +2471,7 @@
                             await pullFromCloud();
                         }
                         subscribeRealtime();
-                    } else {
+                    } else if (!hasAuthCallback) {
                         // Unauthenticated - open Sign In after slight delay so users can log in
                         setTimeout(() => openAuthModal('signin'), 500);
                     }
@@ -2475,6 +2486,11 @@
                             currentUser = newSession.user;
                             syncID = currentUser.id;
                             localStorage.setItem('todo_auth_user_id', currentUser.id);
+
+                            // Clean URL hash/search if coming from email confirmation
+                            if (window.history.replaceState && (window.location.hash || window.location.search)) {
+                                window.history.replaceState(null, '', window.location.pathname);
+                            }
 
                             // Migrate guest data if user is signing into an account for the first time
                             const guestStr = localStorage.getItem('todo_db_guest') || localStorage.getItem('todo_db');
@@ -2497,6 +2513,10 @@
                             subscribeRealtime();
                         }
                     } else if (event === 'SIGNED_OUT') {
+                        if (realtimeChannel && supabaseClient) {
+                            supabaseClient.removeChannel(realtimeChannel);
+                            realtimeChannel = null;
+                        }
                         currentUser = null;
                         syncID = '';
                         localStorage.removeItem('todo_auth_user_id');
@@ -2653,20 +2673,33 @@
 
 
         function subscribeRealtime() {
-            if (!supabaseClient) return;
-            supabaseClient.channel('changes').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'todos', filter: `sync_id=eq.${syncID}` }, payload => {
-                if (isRemoteUpdate || isDragging) return;
-                isRemoteUpdate = true;
-                const remoteDB = payload.new.content;
-                const { merged, changed } = mergeDB(db, remoteDB); 
-                db = merged;
-                checkDailiesReset();
-                saveLocal(); // Persist remote update immediately
-                renderTabOrder();
-                updateTabVisibility();
-                render(false);
-                isRemoteUpdate = false;
-            }).subscribe();
+            if (!supabaseClient || !syncID) return;
+            try {
+                if (realtimeChannel) {
+                    supabaseClient.removeChannel(realtimeChannel);
+                    realtimeChannel = null;
+                }
+                realtimeChannel = supabaseClient.channel(`todos-sync-${syncID}`).on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'todos', 
+                    filter: `sync_id=eq.${syncID}` 
+                }, payload => {
+                    if (isRemoteUpdate || isDragging) return;
+                    isRemoteUpdate = true;
+                    const remoteDB = payload.new.content;
+                    const { merged, changed } = mergeDB(db, remoteDB); 
+                    db = merged;
+                    checkDailiesReset();
+                    saveLocal(); // Persist remote update immediately
+                    renderTabOrder();
+                    updateTabVisibility();
+                    render(false);
+                    isRemoteUpdate = false;
+                }).subscribe();
+            } catch (err) {
+                console.warn('Realtime subscription error:', err);
+            }
         }
 
         function setupSwipe() {
@@ -3818,36 +3851,95 @@
                     isDragging = false;
                     document.body.style.overflow = '';
 
-                    // Manual Drop-on-Header detection
+                    // Manual Drop-on-Section or Drop-on-Item detection
                     const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
-                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                    const header = target?.closest('.section-header');
+                    const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : null;
+                    const itemUid = evt.item.getAttribute('data-uid');
+                    const itemIdx = db[tab].findIndex(i => String(i.uid) === itemUid);
 
-                    if (header && header.hasAttribute('data-sec-id')) {
-                        const targetId = header.getAttribute('data-sec-id');
-                        const itemUid = evt.item.getAttribute('data-uid');
-                        const itemIdx = db[tab].findIndex(i => String(i.uid) === itemUid);
+                    if (itemIdx > -1 && target) {
+                        const item = db[tab][itemIdx];
+                        const header = target.closest('.section-header');
+                        const targetCard = target.closest('.item-card');
+                        const targetGrid = target.closest('.task-grid, .shopping-grid, #archive-content');
+                        const targetSecBlock = target.closest('.section-block');
 
-                        if (itemIdx > -1) {
-                            const item = db[tab][itemIdx];
-                            let changed = false;
-                            if (tab === 'shopping' && item.cat !== targetId) {
-                                item.cat = targetId;
-                                changed = true;
-                            } else if (tab === 'tasks' && item.section !== targetId) {
-                                item.section = targetId;
-                                item.done = false;
-                                changed = true;
+                        let targetSecId = null;
+                        let isArchive = false;
+                        let targetCardUid = null;
+
+                        if (targetCard && targetCard.getAttribute('data-uid') !== itemUid) {
+                            targetCardUid = targetCard.getAttribute('data-uid');
+                            const targetItem = db[tab].find(x => String(x.uid) === targetCardUid);
+                            if (targetItem) {
+                                if (tab === 'tasks') {
+                                    if (targetCard.closest('#archive-content') || targetItem.done) {
+                                        isArchive = true;
+                                    } else {
+                                        targetSecId = targetItem.section || (db.taskSections[0] ? db.taskSections[0].id : null);
+                                    }
+                                } else if (tab === 'shopping') {
+                                    targetSecId = targetItem.cat || 'misc';
+                                } else if (tab === 'dailies') {
+                                    targetSecId = targetItem.section || (db.dailySections[0] ? db.dailySections[0].id : null);
+                                }
+                            }
+                        } else if (header && header.hasAttribute('data-sec-id')) {
+                            targetSecId = header.getAttribute('data-sec-id');
+                        } else if (targetGrid) {
+                            if (targetGrid.id === 'archive-content') {
+                                isArchive = true;
+                            } else if (targetGrid.id.startsWith('list-')) {
+                                targetSecId = targetGrid.id.replace('list-', '');
+                            } else if (targetGrid.hasAttribute('data-cat')) {
+                                targetSecId = targetGrid.getAttribute('data-cat');
+                            }
+                        } else if (targetSecBlock && targetSecBlock.hasAttribute('data-sec-id')) {
+                            targetSecId = targetSecBlock.getAttribute('data-sec-id');
+                        }
+
+                        // Check if section actually changed or moved to archive
+                        let currentSec = tab === 'shopping' ? item.cat : item.section;
+                        if (!currentSec && tab === 'tasks' && db.taskSections[0]) currentSec = db.taskSections[0].id;
+                        if (!currentSec && tab === 'dailies' && db.dailySections[0]) currentSec = db.dailySections[0].id;
+
+                        const isCrossSection = isArchive ? !item.done : (targetSecId && (targetSecId !== currentSec || item.done));
+
+                        if (isCrossSection) {
+                            if (isArchive && tab === 'tasks') {
+                                item.done = true;
+                                if (!item.doneAt) item.doneAt = Date.now();
+                            } else if (targetSecId) {
+                                if (tab === 'shopping') {
+                                    item.cat = targetSecId;
+                                } else if (tab === 'tasks') {
+                                    item.section = targetSecId;
+                                    item.done = false;
+                                } else if (tab === 'dailies') {
+                                    item.section = targetSecId;
+                                }
                             }
 
-                            if (changed) {
-                                // Important: move item to the top of its new container in the array
-                                item.m = Date.now(); // Tag move
-                                db[tab].splice(itemIdx, 1);
+                            item.m = Date.now();
+                            db[tab].splice(itemIdx, 1);
+
+                            if (targetCardUid) {
+                                const targetIdx = db[tab].findIndex(x => String(x.uid) === targetCardUid);
+                                if (targetIdx > -1) {
+                                    // Determine whether dropped on top or bottom half of the target card
+                                    const rect = targetCard.getBoundingClientRect();
+                                    const dropY = touch.clientY;
+                                    const insertAfter = dropY > (rect.top + rect.height / 2);
+                                    db[tab].splice(insertAfter ? targetIdx + 1 : targetIdx, 0, item);
+                                } else {
+                                    db[tab].unshift(item);
+                                }
+                            } else {
                                 db[tab].unshift(item);
-                                saveLocal(); pushToCloud(); render();
-                                return;
                             }
+
+                            saveLocal(); pushToCloud(); render();
+                            return;
                         }
                     }
 
@@ -4556,6 +4648,10 @@
 
         async function handleSignOut() {
             showConfirm('Are you sure you want to log out of your account?', async () => {
+                if (realtimeChannel && supabaseClient) {
+                    supabaseClient.removeChannel(realtimeChannel);
+                    realtimeChannel = null;
+                }
                 if (supabaseClient) {
                     await supabaseClient.auth.signOut();
                 }
