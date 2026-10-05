@@ -1074,15 +1074,58 @@
             margin: 4px 0;
         }
 
-        /* Daily Score Bar */
+        /* Daily Score Bar - Floating Panel */
         .daily-score-bar {
+            position: fixed;
+            bottom: 90px;
+            right: 345px; /* Offset to stay to the left of the 320px notes sidebar */
+            width: 280px;
             background: #161618;
             border: 1px solid #2d2d30;
             border-radius: 16px;
-            padding: 16px 20px;
-            margin: 8px 4px 20px 4px;
-            position: relative;
+            padding: 14px 18px;
+            z-index: 40; /* Keep beneath sidebar z-index (50/70/9999) */
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px);
+            transition: opacity 0.3s, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: grab;
             overflow: hidden;
+        }
+
+        .daily-score-bar.collapsed {
+            width: auto;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+
+        .daily-score-bar.collapsed .score-track,
+        .daily-score-bar.collapsed .score-details,
+        .daily-score-bar.collapsed .score-header .score-label {
+            display: none;
+        }
+
+        .daily-score-bar.collapsed .score-header {
+            margin-bottom: 0;
+        }
+
+        .daily-score-bar.dragging {
+            cursor: grabbing;
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        @media (max-width: 1024px) {
+            .daily-score-bar {
+                right: 20px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .daily-score-bar {
+                right: 12px;
+                bottom: 80px;
+                width: 240px;
+            }
         }
 
         .daily-score-bar::before {
@@ -2109,6 +2152,85 @@
         let isOnline = navigator.onLine;
         let pendingSync = syncID ? (localStorage.getItem(`todo_pending_sync_${syncID}`) === 'true') : false;
 
+        // Multi-Account Saved Logins Management
+        function getSavedAccounts() {
+            try {
+                return JSON.parse(localStorage.getItem('todo_saved_accounts') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveAccountCredentials(email, password, userId) {
+            if (!email || !password) return;
+            const accounts = getSavedAccounts();
+            const idx = accounts.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+            const accData = {
+                email: email.trim(),
+                password: password,
+                userId: userId || (accounts[idx]?.userId || ''),
+                lastUsed: Date.now()
+            };
+            if (idx >= 0) {
+                accounts[idx] = { ...accounts[idx], ...accData };
+            } else {
+                accounts.push(accData);
+            }
+            localStorage.setItem('todo_saved_accounts', JSON.stringify(accounts));
+        }
+
+        function removeSavedAccount(email) {
+            const accounts = getSavedAccounts().filter(a => a.email.toLowerCase() !== email.toLowerCase());
+            localStorage.setItem('todo_saved_accounts', JSON.stringify(accounts));
+        }
+
+        async function switchAccount(email) {
+            const accounts = getSavedAccounts();
+            const target = accounts.find(a => a.email.toLowerCase() === email.toLowerCase());
+            if (!target) return;
+
+            if (currentUser && currentUser.email?.toLowerCase() === email.toLowerCase()) {
+                return; // Already on this account
+            }
+
+            if (!initSupabase()) {
+                showAlert('Cannot switch accounts while offline.');
+                return;
+            }
+
+            // Clean up existing realtime subscription
+            if (realtimeChannel && supabaseClient) {
+                supabaseClient.removeChannel(realtimeChannel);
+                realtimeChannel = null;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: target.email,
+                    password: target.password
+                });
+                if (error) {
+                    showAlert('Failed to sign in to ' + target.email + ': ' + error.message);
+                    return;
+                }
+                if (data?.user) {
+                    saveAccountCredentials(target.email, target.password, data.user.id);
+                    currentUser = data.user;
+                    syncID = currentUser.id;
+                    localStorage.setItem('todo_auth_user_id', currentUser.id);
+                    loadLocal();
+                    renderTabOrder();
+                    updateTabVisibility();
+                    render(false);
+                    await pullFromCloud();
+                    subscribeRealtime();
+                    closeOptionsMenu();
+                }
+            } catch (err) {
+                showAlert('Error switching account: ' + (err.message || err));
+            }
+        }
+
         window.addEventListener('online', () => {
             isOnline = true;
             initSupabase(); // Try to init if not already
@@ -3068,7 +3190,7 @@
 
             const { earned, total, pct } = calculateDailyScore();
 
-            if (total === 0) {
+            if (total === 0 || tab !== 'dailies') {
                 bar.style.display = 'none';
                 return;
             }
@@ -3148,6 +3270,63 @@
 
             const pctEl = document.getElementById('score-percent');
             pctEl.textContent = pct + '%';
+        }
+
+        function initScoreBarDrag(bar) {
+            let dragX = 0, dragY = 0, startX = 0, startY = 0, dragging = false;
+
+            function onStart(cx, cy) {
+                dragging = true;
+                startX = cx - bar.offsetLeft;
+                startY = cy - bar.offsetTop;
+                bar.classList.add('dragging');
+                bar.style.transition = 'none';
+            }
+
+            function onMove(cx, cy) {
+                if (!dragging) return;
+                // Keep score panel to the left of the notes sidebar if present and visible
+                const notesSidebar = document.querySelector('#dailies-pane .notes-sidebar');
+                let maxRightBound = window.innerWidth;
+                if (notesSidebar && window.innerWidth >= 768) {
+                    const rect = notesSidebar.getBoundingClientRect();
+                    // If the sidebar is not collapsed away off screen to the right
+                    if (rect.left < window.innerWidth && rect.left > 100) {
+                        maxRightBound = rect.left - 12;
+                    }
+                }
+                const maxLeft = Math.max(0, maxRightBound - bar.offsetWidth);
+                const newLeft = Math.max(0, Math.min(maxLeft, cx - startX));
+                const newTop = Math.max(0, Math.min(window.innerHeight - bar.offsetHeight, cy - startY));
+                bar.style.left = newLeft + 'px';
+                bar.style.top = newTop + 'px';
+                bar.style.right = 'auto';
+                bar.style.bottom = 'auto';
+            }
+
+            function onEnd() {
+                if (!dragging) return;
+                dragging = false;
+                bar.classList.remove('dragging');
+                bar.style.transition = '';
+            }
+
+            bar.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.score-rating')) return; // Don't drag on tooltip trigger
+                e.preventDefault();
+                onStart(e.clientX, e.clientY);
+            });
+            document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+            document.addEventListener('mouseup', onEnd);
+
+            bar.addEventListener('touchstart', (e) => {
+                if (e.target.closest('.score-rating')) return;
+                onStart(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+            document.addEventListener('touchmove', (e) => {
+                if (dragging) onMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+            document.addEventListener('touchend', onEnd);
         }
 
         function _render() {
@@ -3264,7 +3443,7 @@
                 }
                 const colArr = [dailyC.querySelector('#daily-col-1'), dailyC.querySelector('#daily-col-2')];
 
-                // Ensure score bar is inside the first column
+                // Ensure floating score bar exists on body
                 let scoreBar = document.getElementById('daily-score-bar');
                 if (!scoreBar) {
                     scoreBar = document.createElement('div');
@@ -3286,8 +3465,14 @@
                             <span id="score-points" class="score-points">0<span> / 0</span></span>
                             <span id="score-percent" class="score-percent">0%</span>
                         </div>`;
+                    document.body.appendChild(scoreBar);
+                    initScoreBarDrag(scoreBar);
+                    // Double-click to collapse/expand
+                    scoreBar.addEventListener('dblclick', (e) => {
+                        e.preventDefault();
+                        scoreBar.classList.toggle('collapsed');
+                    });
                 }
-                colArr[0].prepend(scoreBar);
                 
                 colArr.forEach(col => {
                     if (col) Array.from(col.querySelectorAll('.section-block')).forEach(block => {
@@ -3332,6 +3517,24 @@
                 if (newState === 'expanded') sb.classList.add('expanded');
                 if (newState === 'collapsed-hidden') sb.classList.add('collapsed-hidden');
             });
+            // Ensure daily score bar does not get covered by notes sidebar
+            const scoreBar = document.getElementById('daily-score-bar');
+            if (scoreBar) {
+                if (newState === 'expanded') {
+                    scoreBar.style.display = 'none';
+                } else if (tab === 'dailies') {
+                    scoreBar.style.display = '';
+                    if (newState === 'collapsed-hidden') {
+                        if (scoreBar.style.right === '345px' || !scoreBar.style.left) {
+                            scoreBar.style.right = '20px';
+                        }
+                    } else if (newState === 'sidebar') {
+                        if (scoreBar.style.right === '20px' || !scoreBar.style.left) {
+                            scoreBar.style.right = '345px';
+                        }
+                    }
+                }
+            }
         }
 
         function renderNotes() {
@@ -4081,6 +4284,9 @@
             updateTabVisibility();
             updateFabColor();
             setTimeout(updateSectionNavVisibility, 50);
+            // Show/hide floating score bar based on active tab
+            const scoreBar = document.getElementById('daily-score-bar');
+            if (scoreBar) scoreBar.style.display = (tab === 'dailies') ? '' : 'none';
         }
 
         function initTabSortable() {
@@ -4446,9 +4652,35 @@
             m.appendChild(accHead);
 
             const accOpt = document.createElement('div');
-            accOpt.className = 'menu-opt flex flex-col items-start gap-1 !p-3 bg-zinc-800/40 rounded-xl mb-2 border border-white/5';
+            accOpt.className = 'menu-opt flex flex-col items-start gap-2 !p-3 bg-zinc-800/40 rounded-xl mb-2 border border-white/5';
             
+            const savedAccounts = getSavedAccounts();
+
             if (currentUser) {
+                let otherAccountsHtml = '';
+                const otherAccounts = savedAccounts.filter(a => a.email.toLowerCase() !== currentUser.email?.toLowerCase());
+
+                if (otherAccounts.length > 0) {
+                    otherAccountsHtml = `
+                        <div class="w-full pt-2 mt-1 border-t border-white/5 flex flex-col gap-1.5">
+                            <span class="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Switch Account</span>
+                            ${otherAccounts.map(a => `
+                                <div class="flex items-center justify-between w-full p-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 transition group cursor-pointer" onclick="event.stopPropagation(); switchAccount('${a.email.replace(/'/g, "\\'")}');">
+                                    <div class="flex items-center gap-2 truncate">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-zinc-500 flex-shrink-0"></span>
+                                        <span class="text-[11px] font-semibold text-zinc-300 truncate">${a.email}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="event.stopPropagation(); removeSavedAccount('${a.email.replace(/'/g, "\\'")}'); renderOptionsMenu(document.getElementById('fab-menu'));" title="Remove account" class="text-zinc-500 hover:text-red-400 p-1 rounded transition opacity-50 group-hover:opacity-100">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
                 accOpt.innerHTML = `
                     <div class="flex items-center justify-between w-full">
                         <div class="flex items-center gap-2 truncate">
@@ -4456,16 +4688,42 @@
                             <span class="text-xs font-bold text-white truncate">${currentUser.email || 'Private Account'}</span>
                         </div>
                     </div>
-                    <div class="flex gap-2 mt-2 w-full">
+                    ${otherAccountsHtml}
+                    <div class="flex gap-2 mt-1 w-full">
+                        <button onclick="event.stopPropagation(); closeOptionsMenu(); openAuthModal('signin');" class="flex-1 py-1.5 bg-blue-600/30 text-blue-400 hover:bg-blue-600/50 rounded-lg text-[10px] font-bold transition">Add Account</button>
                         <button onclick="event.stopPropagation(); closeOptionsMenu(); handleSignOut();" class="flex-1 py-1.5 bg-red-900/30 text-red-400 hover:bg-red-900/50 rounded-lg text-[10px] font-bold transition">Log Out</button>
                     </div>
                 `;
             } else {
+                let savedAccountsHtml = '';
+                if (savedAccounts.length > 0) {
+                    savedAccountsHtml = `
+                        <div class="w-full pt-2 mt-1 border-t border-white/5 flex flex-col gap-1.5">
+                            <span class="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Saved Accounts</span>
+                            ${savedAccounts.map(a => `
+                                <div class="flex items-center justify-between w-full p-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 transition group cursor-pointer" onclick="event.stopPropagation(); switchAccount('${a.email.replace(/'/g, "\\'")}');">
+                                    <div class="flex items-center gap-2 truncate">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+                                        <span class="text-[11px] font-semibold text-zinc-200 truncate">${a.email}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-[9px] text-blue-400 font-bold px-1.5 py-0.5 rounded bg-blue-500/10">Switch</span>
+                                        <button onclick="event.stopPropagation(); removeSavedAccount('${a.email.replace(/'/g, "\\'")}'); renderOptionsMenu(document.getElementById('fab-menu'));" title="Remove account" class="text-zinc-500 hover:text-red-400 p-1 rounded transition opacity-50 group-hover:opacity-100">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
                 accOpt.innerHTML = `
                     <div class="flex items-center gap-2 text-zinc-400 text-xs font-semibold">
                         <span class="w-2 h-2 rounded-full bg-zinc-600 flex-shrink-0"></span>
                         <span>Guest / Offline Mode</span>
                     </div>
+                    ${savedAccountsHtml}
                     <div class="flex gap-2 mt-2 w-full">
                         <button onclick="event.stopPropagation(); closeOptionsMenu(); openAuthModal('signin');" class="flex-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow">Sign In</button>
                         <button onclick="event.stopPropagation(); closeOptionsMenu(); openAuthModal('signup');" class="flex-1 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-[10px] font-bold transition">Register</button>
@@ -4474,21 +4732,17 @@
             }
             m.appendChild(accOpt);
 
-            // Export Data Option
-            const eOpt = document.createElement('button');
-            eOpt.className = 'menu-opt';
-            eOpt.style.color = '#ffffff';
-            eOpt.innerHTML = `<span>Export Data</span><span class="text-[10px] font-black" style="color:#10b981">↓ JSON</span>`;
-            eOpt.onclick = (e) => { e.stopPropagation(); closeOptionsMenu(); exportData(); };
-            m.appendChild(eOpt);
-
-            // Import Data Option
-            const iOpt = document.createElement('button');
-            iOpt.className = 'menu-opt';
-            iOpt.style.color = '#ffffff';
-            iOpt.innerHTML = `<span>Import Data</span><span class="text-[10px] font-black" style="color:#ef4444">↑ JSON</span>`;
-            iOpt.onclick = (e) => { e.stopPropagation(); closeOptionsMenu(); importData(); };
-            m.appendChild(iOpt);
+            // Import / Export Combined Option
+            const ieOpt = document.createElement('div');
+            ieOpt.className = 'menu-opt flex items-center !py-2.5';
+            ieOpt.innerHTML = `
+                <div class="flex items-center text-sm font-semibold select-none">
+                    <span class="hover:text-blue-400 cursor-pointer transition-colors" onclick="event.stopPropagation(); closeOptionsMenu(); importData();">Import</span>
+                    <span class="text-zinc-600 font-normal px-1">/</span>
+                    <span class="hover:text-blue-400 cursor-pointer transition-colors" onclick="event.stopPropagation(); closeOptionsMenu(); exportData();">Export</span>
+                </div>
+            `;
+            m.appendChild(ieOpt);
         }
 
         function closeOptionsMenu() {
@@ -4591,6 +4845,7 @@
                 if (authMode === 'signin') {
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) throw error;
+                    saveAccountCredentials(email, password, data.user?.id);
                     showAuthAlert('Signed in successfully!', 'success');
                     setTimeout(() => {
                         closeAuthModal();
@@ -4601,6 +4856,7 @@
                     const { data, error } = await supabaseClient.auth.signUp({ email, password });
                     if (error) throw error;
                     if (data.session) {
+                        saveAccountCredentials(email, password, data.user?.id);
                         showAuthAlert('Account created successfully!', 'success');
                         setTimeout(() => {
                             closeAuthModal();
@@ -4608,6 +4864,7 @@
                             spinner.classList.add('hidden');
                         }, 500);
                     } else {
+                        saveAccountCredentials(email, password, data.user?.id);
                         showAuthAlert('Account created! Please check your email to confirm your account.', 'success');
                         submitBtn.disabled = false;
                         spinner.classList.add('hidden');
