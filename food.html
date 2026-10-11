@@ -2367,11 +2367,21 @@
                 const url = localStorage.getItem("gl-supabase-url") || defaultUrl;
                 const key = localStorage.getItem("gl-supabase-key") || defaultKey;
 
+                this._isSyncingFromRealtime = false;
+
                 if (url && key && window.supabase) {
                     try {
                         this.supabase = window.supabase.createClient(url, key);
                         this.updateSupabaseIndicator('connected');
-                        this.pullFromSupabase(true);
+                        this.mergeWithCloud();
+                        this.subscribeToRealtime();
+
+                        // Re-sync when tab becomes visible again (switching between devices/tabs)
+                        document.addEventListener('visibilitychange', () => {
+                            if (document.visibilityState === 'visible' && this.supabase) {
+                                this.mergeWithCloud();
+                            }
+                        });
                     } catch (e) {
                         console.error("Failed to initialize Supabase:", e);
                         this.supabase = null;
@@ -2408,12 +2418,17 @@
                 }
             }
 
-            async pullFromSupabase(silent = false) {
+            // ---- Merge-based sync: unions local + cloud by ID, no data loss ----
+            async mergeWithCloud() {
                 if (!this.supabase) return;
+                if (this._isMerging) return; // prevent concurrent merges
+                this._isMerging = true;
 
                 try {
+                    this.updateSupabaseIndicator('connected', 'Syncing...');
+
                     const [catRes, itemRes, healthRes] = await Promise.all([
-                        this.supabase.from('categories').select('*').order('name'),
+                        this.supabase.from('categories').select('*'),
                         this.supabase.from('items').select('*'),
                         this.supabase.from('health_selected').select('data').eq('id', 'user_portions').maybeSingle()
                     ]);
@@ -2421,66 +2436,63 @@
                     if (catRes.error) throw catRes.error;
                     if (itemRes.error) throw itemRes.error;
 
-                    if (catRes.data && catRes.data.length > 0) {
-                        this.categories = catRes.data.map(c => ({ id: c.id, name: c.name, description: c.description || '' }));
+                    const cloudCategories = (catRes.data || []).map(c => ({
+                        id: c.id, name: c.name, description: c.description || ''
+                    }));
+                    const cloudItems = (itemRes.data || []).map(i => ({
+                        id: i.id,
+                        name: i.name,
+                        categoryId: i.category_id || i.categoryId,
+                        rating: i.rating,
+                        location: i.location || '',
+                        notes: i.notes || ''
+                    }));
+                    const cloudHealth = (healthRes.data && healthRes.data.data) ? healthRes.data.data : {};
 
-                        if (itemRes.data && itemRes.data.length > 0) {
-                            this.items = itemRes.data.map(i => ({
-                                id: i.id,
-                                name: i.name,
-                                categoryId: i.category_id || i.categoryId,
-                                rating: i.rating,
-                                location: i.location || '',
-                                notes: i.notes || ''
-                            }));
-                        } else {
-                            this.items = [];
-                        }
+                    // Merge categories: union by ID, local version wins on conflict
+                    const mergedCatMap = new Map();
+                    cloudCategories.forEach(c => mergedCatMap.set(c.id, c));
+                    this.categories.forEach(c => mergedCatMap.set(c.id, c)); // local wins
+                    this.categories = Array.from(mergedCatMap.values());
 
-                        if (healthRes.data && healthRes.data.data) {
-                            this.healthSelected = healthRes.data.data;
-                            localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
-                        }
+                    // Merge items: union by ID, local version wins on conflict
+                    const mergedItemMap = new Map();
+                    cloudItems.forEach(i => mergedItemMap.set(i.id, i));
+                    this.items.forEach(i => mergedItemMap.set(i.id, i)); // local wins
+                    this.items = Array.from(mergedItemMap.values());
 
-                        this.saveToStorage();
-                        this.renderCategories();
-                        this.renderActiveCategoryInfo();
-                        this.renderItems();
-                        this.populateCategoryDropdown();
-                        this.renderHealthyFoods();
-                        this.updateHealthCalculator();
-                        this.updateSupabaseIndicator('connected', 'Synced with Cloud');
+                    // Merge health selections: union keys, local wins on conflict
+                    this.healthSelected = { ...cloudHealth, ...this.healthSelected };
+                    localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
 
-                        if (!silent) {
-                            alert("Data successfully synchronized from Supabase cloud!");
-                        }
-                    } else if (this.categories && this.categories.length > 0) {
-                        // Supabase tables are empty, automatically seed cloud database from local items!
-                        await this.pushLocalToSupabase(true);
-                    }
+                    // Save merged result locally
+                    this.saveToStorage();
+
+                    // Push the merged result back to cloud so all devices converge
+                    await this.pushMergedToCloud();
+
+                    // Re-render
+                    this.renderCategories();
+                    this.renderActiveCategoryInfo();
+                    this.renderItems();
+                    this.populateCategoryDropdown();
+                    this.renderHealthyFoods();
+                    this.updateHealthCalculator();
+                    this.updateSupabaseIndicator('connected', 'Synced with Cloud');
+
                 } catch (err) {
-                    console.error("Error pulling from Supabase:", err);
+                    console.error("Error merging with cloud:", err);
                     this.updateSupabaseIndicator('error', err.message);
-                    if (!silent) {
-                        alert(`Failed to sync from cloud: ${err.message}`);
-                    }
+                } finally {
+                    this._isMerging = false;
                 }
             }
 
-            async pushLocalToSupabase(silent = false) {
-                if (!this.supabase) {
-                    if (!silent) alert("Please connect to Supabase first.");
-                    return;
-                }
-
-                if (!silent && !confirm("Upload your local categories, items, and portion settings to Supabase? This will overwrite or merge into cloud tables.")) {
-                    return;
-                }
+            // Push the current merged state to cloud (silent, no confirmation)
+            async pushMergedToCloud() {
+                if (!this.supabase) return;
 
                 try {
-                    this.updateSupabaseIndicator('connected', 'Auto-syncing to cloud...');
-
-                    // 1. Upsert categories
                     if (this.categories.length > 0) {
                         const { error: catErr } = await this.supabase.from('categories').upsert(
                             this.categories.map(c => ({ id: c.id, name: c.name, description: c.description || '' }))
@@ -2488,7 +2500,6 @@
                         if (catErr) throw catErr;
                     }
 
-                    // 2. Upsert items
                     if (this.items.length > 0) {
                         const { error: itemErr } = await this.supabase.from('items').upsert(
                             this.items.map(i => ({
@@ -2503,7 +2514,6 @@
                         if (itemErr) throw itemErr;
                     }
 
-                    // 3. Upsert health selected
                     const { error: healthErr } = await this.supabase.from('health_selected').upsert({
                         id: 'user_portions',
                         data: this.healthSelected,
@@ -2511,21 +2521,109 @@
                     });
                     if (healthErr) throw healthErr;
 
-                    this.updateSupabaseIndicator('connected', 'Synced with Cloud');
-                    if (!silent) {
-                        alert("Local data successfully pushed to Supabase cloud tables!");
-                    }
                 } catch (err) {
-                    console.error("Error pushing to Supabase:", err);
-                    this.updateSupabaseIndicator('error', err.message);
-                    if (!silent) {
-                        alert(`Failed to push data to Supabase: ${err.message}`);
+                    console.error("Error pushing merged data to cloud:", err);
+                }
+            }
+
+            // Legacy method kept for compatibility (used only for initial empty-cloud seeding)
+            async pushLocalToSupabase(silent = false) {
+                await this.pushMergedToCloud();
+            }
+
+            // ---- Supabase Realtime: live sync across devices ----
+            subscribeToRealtime() {
+                if (!this.supabase) return;
+
+                // Remove old subscription if any
+                if (this._realtimeChannel) {
+                    this.supabase.removeChannel(this._realtimeChannel);
+                }
+
+                this._realtimeChannel = this.supabase
+                    .channel('gl-sync')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, (payload) => {
+                        if (this._isSyncingFromRealtime) return;
+                        this.handleRealtimeCategory(payload);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, (payload) => {
+                        if (this._isSyncingFromRealtime) return;
+                        this.handleRealtimeItem(payload);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'health_selected' }, (payload) => {
+                        if (this._isSyncingFromRealtime) return;
+                        this.handleRealtimeHealth(payload);
+                    })
+                    .subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            console.log('Realtime sync active');
+                        }
+                    });
+            }
+
+            handleRealtimeCategory(payload) {
+                const { eventType, new: newRec, old: oldRec } = payload;
+
+                if (eventType === 'DELETE' && oldRec) {
+                    this.categories = this.categories.filter(c => c.id !== oldRec.id);
+                } else if (newRec && (eventType === 'INSERT' || eventType === 'UPDATE')) {
+                    const cat = { id: newRec.id, name: newRec.name, description: newRec.description || '' };
+                    const idx = this.categories.findIndex(c => c.id === cat.id);
+                    if (idx !== -1) {
+                        this.categories[idx] = cat;
+                    } else {
+                        this.categories.push(cat);
                     }
+                }
+
+                this.saveToStorage();
+                this.renderCategories();
+                this.renderActiveCategoryInfo();
+                this.renderItems();
+                this.populateCategoryDropdown();
+            }
+
+            handleRealtimeItem(payload) {
+                const { eventType, new: newRec, old: oldRec } = payload;
+
+                if (eventType === 'DELETE' && oldRec) {
+                    this.items = this.items.filter(i => i.id !== oldRec.id);
+                } else if (newRec && (eventType === 'INSERT' || eventType === 'UPDATE')) {
+                    const item = {
+                        id: newRec.id,
+                        name: newRec.name,
+                        categoryId: newRec.category_id || newRec.categoryId,
+                        rating: newRec.rating,
+                        location: newRec.location || '',
+                        notes: newRec.notes || ''
+                    };
+                    const idx = this.items.findIndex(i => i.id === item.id);
+                    if (idx !== -1) {
+                        this.items[idx] = item;
+                    } else {
+                        this.items.push(item);
+                    }
+                }
+
+                this.saveToStorage();
+                this.renderCategories();
+                this.renderActiveCategoryInfo();
+                this.renderItems();
+            }
+
+            handleRealtimeHealth(payload) {
+                const { eventType, new: newRec } = payload;
+                if ((eventType === 'INSERT' || eventType === 'UPDATE') && newRec && newRec.data) {
+                    this.healthSelected = { ...this.healthSelected, ...newRec.data };
+                    localStorage.setItem("gl-health-selected", JSON.stringify(this.healthSelected));
+                    this.renderHealthyFoods();
+                    this.updateHealthCalculator();
                 }
             }
 
             async syncCategoryToDb(category, action = 'upsert') {
                 if (!this.supabase) return;
+                this._isSyncingFromRealtime = true;
                 try {
                     if (action === 'delete') {
                         await this.supabase.from('categories').delete().eq('id', category.id);
@@ -2538,11 +2636,14 @@
                     }
                 } catch (e) {
                     console.warn("Supabase background category sync error:", e);
+                } finally {
+                    setTimeout(() => { this._isSyncingFromRealtime = false; }, 500);
                 }
             }
 
             async syncItemToDb(item, action = 'upsert') {
                 if (!this.supabase) return;
+                this._isSyncingFromRealtime = true;
                 try {
                     if (action === 'delete') {
                         await this.supabase.from('items').delete().eq('id', item.id);
@@ -2558,11 +2659,14 @@
                     }
                 } catch (e) {
                     console.warn("Supabase background item sync error:", e);
+                } finally {
+                    setTimeout(() => { this._isSyncingFromRealtime = false; }, 500);
                 }
             }
 
             async syncHealthToDb() {
                 if (!this.supabase) return;
+                this._isSyncingFromRealtime = true;
                 try {
                     await this.supabase.from('health_selected').upsert({
                         id: 'user_portions',
@@ -2571,6 +2675,8 @@
                     });
                 } catch (e) {
                     console.warn("Supabase background health portion sync error:", e);
+                } finally {
+                    setTimeout(() => { this._isSyncingFromRealtime = false; }, 500);
                 }
             }
         }
