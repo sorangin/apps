@@ -448,6 +448,30 @@
             border: 1px solid var(--border);
         }
 
+        .sort-select {
+            background-color: var(--bg-app);
+            color: var(--text-sub);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 3px 6px;
+            font-size: 11px;
+            font-family: var(--font-primary);
+            cursor: pointer;
+            outline: none;
+            transition: var(--transition);
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23a1a1aa' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 4px center;
+            padding-right: 18px;
+        }
+
+        .sort-select:hover, .sort-select:focus {
+            border-color: var(--text-sub);
+            color: var(--text-main);
+        }
+
         .view-btn {
             background: none;
             border: none;
@@ -711,6 +735,26 @@
             grid-template-columns: repeat(auto-fill, minmax(180px, 240px));
             gap: 8px;
             justify-content: start;
+        }
+
+        .grid-rating-header {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-sub);
+            padding: 8px 2px 2px 2px;
+            margin-top: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .grid-rating-header:first-child {
+            margin-top: 0;
+            padding-top: 2px;
         }
 
         /* Empty State */
@@ -1160,6 +1204,13 @@
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
                         </button>
                     </div>
+
+                    <select class="sort-select" id="sort-select" onchange="app.setSortMode(this.value)" title="Sort items">
+                        <option value="newest">Newest</option>
+                        <option value="oldest">Oldest</option>
+                        <option value="a-z">A → Z</option>
+                        <option value="z-a">Z → A</option>
+                    </select>
                 </div>
             </div>
 
@@ -1589,6 +1640,7 @@
                 this.activeCategoryId = "";
                 this.searchQuery = "";
                 this.viewMode = "kanban";
+                this.sortMode = "newest";
                 this.modalSelectedRating = "good";
                 this.currentSection = "ledger";
                 this.healthSelected = {}; // Key: "catIndex-foodName", Value: true/false
@@ -1612,6 +1664,18 @@
                     this.items = SEED_ITEMS;
                     this.saveToStorage();
                 }
+
+                // Backfill createdAt for items that don't have it
+                let needsSave = false;
+                this.items.forEach((item, i) => {
+                    if (!item.createdAt) {
+                        // Try to extract timestamp from item-{timestamp} IDs
+                        const match = item.id && item.id.match(/^item-(\d{13,})$/);
+                        item.createdAt = match ? parseInt(match[1]) : i + 1;
+                        needsSave = true;
+                    }
+                });
+                if (needsSave) this.saveToStorage();
 
                 const sortedCategories = [...this.categories].sort((a, b) => a.name.localeCompare(b.name));
                 if (!this.activeCategoryId || (this.activeCategoryId !== 'all' && !this.categories.some(c => c.id === this.activeCategoryId))) {
@@ -1728,6 +1792,9 @@
                 const viewControls = document.querySelector('.view-controls');
                 if (viewControls) viewControls.style.display = "flex";
 
+                const sortSelect = document.getElementById('sort-select');
+                if (sortSelect) sortSelect.style.display = "";
+
                 const floatingAddBtn = document.querySelector('.floating-add-btn');
                 if (floatingAddBtn) floatingAddBtn.style.display = "flex";
 
@@ -1783,6 +1850,9 @@
                     const viewControls = document.querySelector('.view-controls');
                     if (viewControls) viewControls.style.display = "none";
 
+                    const sortSelect = document.getElementById('sort-select');
+                    if (sortSelect) sortSelect.style.display = "none";
+
                     const floatingAddBtn = document.querySelector('.floating-add-btn');
                     if (floatingAddBtn) floatingAddBtn.style.display = "none";
 
@@ -1814,6 +1884,22 @@
                         item.name.toLowerCase().includes(q) || 
                         (item.notes && item.notes.toLowerCase().includes(q))
                     );
+                }
+
+                // Sort
+                switch (this.sortMode) {
+                    case "newest":
+                        filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                        break;
+                    case "oldest":
+                        filtered.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                        break;
+                    case "a-z":
+                        filtered.sort((a, b) => a.name.localeCompare(b.name));
+                        break;
+                    case "z-a":
+                        filtered.sort((a, b) => b.name.localeCompare(a.name));
+                        break;
                 }
 
                 return filtered;
@@ -1866,7 +1952,30 @@
 
             renderGridView(items) {
                 const grid = document.getElementById("grid-view");
-                grid.innerHTML = this.generateItemCardsHtml(items, true);
+                if (items.length === 0) {
+                    grid.innerHTML = this.generateItemCardsHtml(items, true);
+                    return;
+                }
+
+                const goodItems = items.filter(i => i.rating === "good");
+                const okayItems = items.filter(i => i.rating === "okay");
+                const badItems = items.filter(i => i.rating === "bad");
+
+                let html = "";
+                if (goodItems.length > 0) {
+                    html += `<div class="grid-rating-header"><span class="column-dot" style="background-color: var(--good-dot)"></span> Good (${goodItems.length})</div>`;
+                    html += this.generateItemCardsHtml(goodItems, true);
+                }
+                if (okayItems.length > 0) {
+                    html += `<div class="grid-rating-header"><span class="column-dot" style="background-color: var(--okay-dot)"></span> Okay (${okayItems.length})</div>`;
+                    html += this.generateItemCardsHtml(okayItems, true);
+                }
+                if (badItems.length > 0) {
+                    html += `<div class="grid-rating-header"><span class="column-dot" style="background-color: var(--bad-dot)"></span> Bad (${badItems.length})</div>`;
+                    html += this.generateItemCardsHtml(badItems, true);
+                }
+
+                grid.innerHTML = html;
             }
 
             pickRandomFood(rating) {
@@ -2101,6 +2210,11 @@
                 this.renderItems();
             }
 
+            setSortMode(mode) {
+                this.sortMode = mode;
+                this.renderItems();
+            }
+
             showTooltip(event, itemId) {
                 const item = this.items.find(i => i.id === itemId);
                 if (!item) return;
@@ -2288,7 +2402,7 @@
                     }
                 } else {
                     const newId = `item-${Date.now()}`;
-                    savedItem = { id: newId, name, categoryId, notes, location, rating };
+                    savedItem = { id: newId, name, categoryId, notes, location, rating, createdAt: Date.now() };
                     this.items.push(savedItem);
                 }
 
@@ -2445,7 +2559,8 @@
                         categoryId: i.category_id || i.categoryId,
                         rating: i.rating,
                         location: i.location || '',
-                        notes: i.notes || ''
+                        notes: i.notes || '',
+                        createdAt: i.created_at || i.createdAt || 0
                     }));
                     const cloudHealth = (healthRes.data && healthRes.data.data) ? healthRes.data.data : {};
 
@@ -2508,7 +2623,8 @@
                                 category_id: i.categoryId,
                                 rating: i.rating,
                                 location: i.location || '',
-                                notes: i.notes || ''
+                                notes: i.notes || '',
+                                created_at: i.createdAt || 0
                             }))
                         );
                         if (itemErr) throw itemErr;
@@ -2595,7 +2711,8 @@
                         categoryId: newRec.category_id || newRec.categoryId,
                         rating: newRec.rating,
                         location: newRec.location || '',
-                        notes: newRec.notes || ''
+                        notes: newRec.notes || '',
+                        createdAt: newRec.created_at || newRec.createdAt || 0
                     };
                     const idx = this.items.findIndex(i => i.id === item.id);
                     if (idx !== -1) {
@@ -2654,7 +2771,8 @@
                             category_id: item.categoryId,
                             rating: item.rating,
                             location: item.location || '',
-                            notes: item.notes || ''
+                            notes: item.notes || '',
+                            created_at: item.createdAt || 0
                         });
                     }
                 } catch (e) {
