@@ -698,6 +698,7 @@ function renderTimerDisplayOnly(){
   if(!timerEditing) timerDisplay.textContent=formatTimer(rem);
   if(tFinished) timerStatus.textContent="";
   else if(tRunning()&&tEndAt!=null) timerStatus.textContent=new Date(tEndAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+  else if(rem>0) timerStatus.textContent=new Date(Date.now()+rem*1000).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
   else timerStatus.textContent="";
   timerDisplay.classList.toggle("running", !!tRunning() && !tFinished);
   timerDisplay.classList.toggle("finished", !!tFinished);
