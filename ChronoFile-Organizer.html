@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoFile Organizer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 20%);
+        }
+
+        .app-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .app-container.drag-active {
+            border-color: var(--accent-color);
+            background: rgba(56, 189, 248, 0.15);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        button.primary {
+            background: var(--accent-color);
+            color: #0f172a;
+            border: none;
+        }
+
+        button.primary:hover {
+            background: var(--accent-hover);
+        }
+
+        #clearBtn {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-left: auto;
+        }
+
+        #clearBtn:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .file-list-header {
+            display: grid;
+            grid-template-columns: 2fr 2fr 1fr;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px 8px 0 0;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .file-list {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .file-item {
+            display: grid;
+            grid-template-columns: 2fr 2fr 1fr;
+            padding: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+            transition: background 0.1s;
+            align-items: center;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .file-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-right: 1rem;
+        }
+
+        .new-name {
+            color: var(--accent-color);
+            font-family: 'Courier New', monospace;
+        }
+
+        .status {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status.success {
+            color: var(--success-color);
+        }
+
+        .status.error {
+            color: var(--danger-color);
+        }
+
+        .status.pending {
+            color: var(--text-secondary);
+        }
+
+        .status.skipped {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+
+        .source-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            padding: 1px 6px;
+            border-radius: 999px;
+            border: 1px solid var(--glass-border);
+            color: var(--accent-color);
+            background: rgba(56, 189, 248, 0.12);
+            margin-left: 0.4rem;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .source-badge.filename {
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.05);
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translateY(150%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-secondary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>ChronoFile <span
+                    style="font-size: 0.4em; background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; vertical-align: middle;">v2.3</span>
+            </h1>
+            <p class="subtitle">Automatically organize your files by the date they were actually captured, from photo &amp; video metadata first, filenames second.</p>
+        </header>
+
+        <div class="controls">
+            <button id="openFolderBtn" class="primary">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                Select Folder
+            </button>
+            <button id="openFilesBtn" class="primary">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Select Files
+            </button>
+            <button id="processBtn" disabled>
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Rename All
+            </button>
+            <button id="clearBtn" disabled>Clear</button>
+        </div>
+
+        <div class="file-list-header">
+            <div>Original Filename</div>
+            <div>New Filename Preview</div>
+            <div>Status</div>
+        </div>
+        <div id="fileList" class="file-list">
+            <div class="empty-state">No files selected. Select a folder or drag files here.</div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <span id="toastMessage">Action completed</span>
+    </div>
+
+    <script>
+        // State
+        let files = [];
+        const processedFiles = new Set();
+        let rootDirectoryHandle = null;
+
+        // DOM Elements
+        const fileListEl = document.getElementById('fileList');
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const appContainer = document.querySelector('.app-container');
+        const toastEl = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMessage');
+
+        // Regex Patterns
+        // Fix: (?<!\d)/(?!\d) instead of \b, so glued names like VID20240115 and
+        // 20240115_video match (underscore is a word char, so \b failed there).
+        // Years now accept 19xx as well as 20xx. Unknown month/day stay '00' —
+        // that is intentional: an unknown date part is marked, never guessed.
+        const DATE_PATTERNS = [
+            { regex: /(?<!\d)((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?!\d)/, order: ['Y', 'M', 'D'] },
+            { regex: /(?<!\d)((?:19|20)\d{2})[-./_](0[1-9]|1[0-2])[-./_](0[1-9]|[12]\d|3[01])(?!\d)/, order: ['Y', 'M', 'D'] },
+            { regex: /(?<!\d)((?:19|20)\d{2})[-./_](0[1-9]|1[0-2])(?!\d)/, order: ['Y', 'M', '00'] },
+            { regex: /(?<!\d)((?:19|20)\d{2})(0[1-9]|1[0-2])(?!\d)/, order: ['Y', 'M', '00'] },
+            { regex: /(?<!\d)(0[1-9]|1[0-2])[-./_](0[1-9]|[12]\d|3[01])[-./_]((?:19|20)\d{2})(?!\d)/, order: ['M', 'D', 'Y'] },
+            { regex: /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})\b/i, order: ['M_NAME', 'D', 'Y'] },
+            { regex: /\b(\d{1,2})(?:st|nd|rd|th)?\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+((?:19|20)\d{2})\b/i, order: ['D', 'M_NAME', 'Y'] },
+            { regex: /(?<!\d)((?:19|20)\d{2})(?!\d)/, order: ['Y', '00', '00'] }
+        ];
+
+        function isValidDate(y, m, d) {
+            if (m < 1 || m > 12 || d < 1) return false;
+            const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+            return d <= [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+        }
+
+        const MONTH_MAP = {
+            'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
+            'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+        };
+
+        function parseDateFromFilename(filename) {
+            for (const pattern of DATE_PATTERNS) {
+                const match = filename.match(pattern.regex);
+                if (match) {
+                    let year, month, day;
+                    const groups = match.slice(1);
+                    pattern.order.forEach((type, index) => {
+                        const val = groups[index];
+                        if (val) {
+                            if (type === 'Y') year = val;
+                            if (type === 'M') month = val;
+                            if (type === 'D') day = val.padStart(2, '0');
+                            if (type === 'M_NAME') month = MONTH_MAP[val.substring(0, 3).toLowerCase()];
+                        }
+                    });
+                    if (!month) month = '00';
+                    if (!day) day = '00';
+                    // A full date that isn't real (e.g. Feb 30) is not used as-is;
+                    // keep looking — a weaker pattern may still get the year,
+                    // with the unknown parts left as 00.
+                    if (year && month !== '00' && day !== '00' && !isValidDate(+year, +month, +day)) continue;
+                    if (year) return { year, month, day, textInName: match[0] };
+                }
+            }
+            return null;
+        }
+
+        function generateNewName(originalName, dateInfo) {
+            const newDateStr = `${dateInfo.year}${dateInfo.month}${dateInfo.day}`;
+
+            // Remove date text from the name, no matter where the winning
+            // date came from. Bug in v2.1: when the date came from metadata,
+            // nothing was stripped, so a file already named
+            // "2011-04-11 Fierce.jpg" became "20110411 2011-04-11 Fierce.jpg"
+            // with the date twice. Now: strip the metadata date's own text
+            // if it has one, otherwise (and additionally) strip any date
+            // found in the filename. Full dates are stripped repeatedly so
+            // a name already mangled by v2.1 ("20110411 2011-04-11 ...")
+            // is repaired back to a single prefix on a re-run.
+            let nameWithoutDate = originalName;
+            if (dateInfo.textInName) {
+                nameWithoutDate = nameWithoutDate.replace(dateInfo.textInName, '');
+            }
+            for (let i = 0; i < 4; i++) {
+                const inName = parseDateFromFilename(nameWithoutDate);
+                if (!inName || !inName.textInName || !nameWithoutDate.includes(inName.textInName)) break;
+                // First pass always strips (same as v2.0). Later passes only
+                // strip full dates, so a stray year in a title is not eaten.
+                if (i > 0 && (inName.month === '00' || inName.day === '00')) break;
+                nameWithoutDate = nameWithoutDate.replace(inName.textInName, '');
+            }
+
+            const extIndex = originalName.lastIndexOf('.');
+            const ext = extIndex > 0 ? originalName.substring(extIndex) : '';
+
+            // Remove extension to find base name. Fix: slice it off the END —
+            // the old .replace(ext, '') removed the first match anywhere in
+            // the name, corrupting names that contain the ext text earlier.
+            let baseName = (ext && nameWithoutDate.endsWith(ext)) ? nameWithoutDate.slice(0, -ext.length) : nameWithoutDate;
+
+            // Aggressive cleaning of leftover separators
+            baseName = baseName.replace(/^[-_,.\s]+|[-_,.\s]+$/g, '').replace(/\s{2,}/g, ' ').trim();
+
+            if (baseName.length > 0) {
+                return `${newDateStr} ${baseName}${ext}`;
+            } else {
+                return `${newDateStr}${ext}`;
+            }
+        }
+
+
+        // ---- Metadata date extraction (v2.1) ----
+        // Goal: recover the ACTUAL capture date the way Google Anti Gravity did
+        // for Crystal's photos - from inside the file, not just its name.
+        // Priority: metadata (EXIF / QuickTime / PNG) first, filename second.
+        // Deliberately NOT used: file.lastModified. That is when a file was
+        // copied or downloaded, not when a photo/video was taken, and Sora's
+        // rule is never to guess a date. Metadata is not a guess, it is the
+        // camera's own timestamp stored in the file.
+        function validYMD(y, m, d) {
+            y = +y; m = +m; d = +d;
+            if (!y || y < 1900 || y > 2099) return null;
+            if (!isValidDate(y, m, d)) return null;
+            return { year: String(y), month: String(m).padStart(2, '0'), day: String(d).padStart(2, '0') };
+        }
+        function dateFromExifString(s) {
+            if (!s) return null;
+            const m = String(s).match(/((?:19|20)\d{2})[:\-](\d{1,2})[:\-](\d{1,2})/);
+            if (!m) return null;
+            return validYMD(m[1], m[2], m[3]);
+        }
+        function dateFromIsoString(s) {
+            if (!s) return null;
+            const m = String(s).match(/((?:19|20)\d{2})-(\d{2})-(\d{2})/);
+            if (!m) return null;
+            return validYMD(m[1], m[2], m[3]);
+        }
+
+        // Parse a TIFF block (used by JPEG EXIF, PNG eXIf, WebP EXIF, TIFF, HEIC).
+        // tiffView is a DataView starting exactly at the TIFF header.
+        function parseTiffCandidates(tiffView) {
+            try {
+                if (tiffView.byteLength < 8) return null;
+                const le = tiffView.getUint16(0) === 0x4949; // 'II'
+                const mm = tiffView.getUint16(0) === 0x4D4D; // 'MM'
+                if (!le && !mm) return null;
+                if (tiffView.getUint16(2, le) !== 42) return null;
+                const readStr = (off, len) => {
+                    let out = '';
+                    for (let i = 0; i < len && off + i < tiffView.byteLength; i++) {
+                        const c = tiffView.getUint8(off + i);
+                        if (c === 0) break;
+                        out += String.fromCharCode(c);
+                    }
+                    return out;
+                };
+                const parseIFD = (offset) => {
+                    const tags = {};
+                    if (offset + 2 > tiffView.byteLength) return tags;
+                    const count = tiffView.getUint16(offset, le);
+                    for (let i = 0; i < count; i++) {
+                        const e = offset + 2 + i * 12;
+                        if (e + 12 > tiffView.byteLength) break;
+                        const tag = tiffView.getUint16(e, le);
+                        const type = tiffView.getUint16(e + 2, le);
+                        const num = tiffView.getUint32(e + 4, le);
+                        const valOff = e + 8;
+                        // ASCII type = 2
+                        if (type === 2 && num > 0) {
+                            const dataOff = num <= 4 ? valOff : tiffView.getUint32(valOff, le);
+                            tags[tag] = readStr(dataOff, num);
+                        } else if (tag === 0x8769) { // ExifIFD pointer
+                            tags[tag] = tiffView.getUint32(valOff, le);
+                        }
+                    }
+                    return tags;
+                };
+                const ifd0Off = tiffView.getUint32(4, le);
+                const ifd0 = parseIFD(ifd0Off);
+                let sub = {};
+                if (ifd0[0x8769]) sub = parseIFD(ifd0[0x8769]);
+                const mk = (s) => { const d = dateFromExifString(s); if (d) d.source = 'EXIF'; return d || null; };
+                return {
+                    original: mk(sub[0x9003]),
+                    digitized: mk(sub[0x9004]),
+                    dateTime: mk(ifd0[0x0132])
+                };
+            } catch (e) { return null; }
+        }
+        function parseTiffForDate(tiffView) {
+            const c = parseTiffCandidates(tiffView);
+            if (!c) return null;
+            return c.original || c.digitized || c.dateTime || null;
+        }
+        function findExifCandidatesInBuffer(buf) {
+            const bytes = new Uint8Array(buf);
+            const needle = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00];
+            outer:
+            for (let i = 0; i + needle.length + 8 < bytes.length; i++) {
+                for (let j = 0; j < needle.length; j++) if (bytes[i + j] !== needle[j]) continue outer;
+                const dv = new DataView(buf, i + needle.length, buf.byteLength - (i + needle.length));
+                const c = parseTiffCandidates(dv);
+                if (c && (c.original || c.digitized || c.dateTime)) return c;
+            }
+            try {
+                const c = parseTiffCandidates(new DataView(buf));
+                if (c && (c.original || c.digitized || c.dateTime)) return c;
+            } catch (e) {}
+            return null;
+        }
+        // "Media created": many files have NO Date Taken, but do carry a
+        // media creation date under another label - XMP MediaCreateDate /
+        // CreateDate in photos, creation_time in MP4/MOV metadata,
+        // DATE_ENCODED in Matroska tags. Sora asked for that date to be
+        // used when Date Taken is missing (2026-11-16). It is a real stored
+        // creation timestamp, not the filesystem modified date, so using
+        // it does not break the never-guess rule.
+        const MEDIA_LABELS = [
+            ['datetimeoriginal', 'EXIF'],
+            ['mediacreatedate', 'Media created'],
+            ['media created', 'Media created'],
+            ['creation_time', 'Media created'],
+            ['creationdate', 'Media created'],
+            ['date_encoded', 'Media created'],
+            ['dateencoded', 'Media created'],
+            ['encodeddate', 'Media created'],
+            ['createdate', 'Media created'],
+            ['datecreated', 'Media created']
+        ];
+        function scanLabelledMediaDate(buf) {
+            try {
+                const text = new TextDecoder('latin1').decode(buf).toLowerCase();
+                for (const [label, source] of MEDIA_LABELS) {
+                    let idx = 0;
+                    while (true) {
+                        idx = text.indexOf(label, idx);
+                        if (idx < 0) break;
+                        const near = text.slice(idx + label.length, idx + label.length + 220);
+                        const m = near.match(/((?:19|20)\d{2})[-:](\d{2})[-:](\d{2})/);
+                        if (m) {
+                            const d = validYMD(m[1], m[2], m[3]);
+                            if (d) { d.source = source; return d; }
+                        }
+                        idx += label.length;
+                    }
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        function findExifInBuffer(buf) {
+            // Scan for "Exif\0\0" + TIFF header anywhere in the buffer (JPEG APP1, HEIC, etc.)
+            const bytes = new Uint8Array(buf);
+            const needle = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00]; // Exif\0\0
+            outer:
+            for (let i = 0; i + needle.length + 8 < bytes.length; i++) {
+                for (let j = 0; j < needle.length; j++) if (bytes[i + j] !== needle[j]) continue outer;
+                const dv = new DataView(buf, i + needle.length, buf.byteLength - (i + needle.length));
+                const d = parseTiffForDate(dv);
+                if (d) return d;
+            }
+            // Bare TIFF header at offset 0 (TIFF file, PNG/WebP eXIf chunk payload)
+            try {
+                const d = parseTiffForDate(new DataView(buf));
+                if (d) return d;
+            } catch (e) {}
+            return null;
+        }
+
+        async function dateFromJpeg(file) {
+            const buf = await file.slice(0, 1024 * 1024).arrayBuffer();
+            const cands = findExifCandidatesInBuffer(buf);
+            if (cands && cands.original) return cands.original;
+            const media = scanLabelledMediaDate(buf);
+            if (media) return media;
+            if (cands) return cands.digitized || cands.dateTime || null;
+            return null;
+        }
+
+        async function dateFromPng(file) {
+            const buf = await file.slice(0, 1024 * 1024).arrayBuffer();
+            const view = new DataView(buf);
+            const bytes = new Uint8Array(buf);
+            if (bytes.length < 8 || view.getUint32(0) !== 0x89504E47) return null;
+            let off = 8;
+            let textDate = null;
+            while (off + 12 <= bytes.length) {
+                const len = view.getUint32(off);
+                const type = String.fromCharCode(bytes[off+4], bytes[off+5], bytes[off+6], bytes[off+7]);
+                const dataStart = off + 8;
+                if (type === 'tIME' && len >= 7) {
+                    const d = validYMD(view.getUint16(dataStart), bytes[dataStart+2], bytes[dataStart+3]);
+                    if (d) { d.source = 'PNG'; return d; }
+                } else if (type === 'eXIf' && len > 8) {
+                    const d = parseTiffForDate(new DataView(buf, dataStart, len));
+                    if (d) { d.source = 'EXIF'; return d; }
+                } else if ((type === 'tEXt' || type === 'iTXt' || type === 'zTXt') && len > 0 && len < 5000) {
+                    try {
+                        const txt = new TextDecoder('latin1').decode(buf.slice(dataStart, dataStart + len));
+                        const m = txt.match(/((?:19|20)\d{2}[-:]\d{2}[-:]\d{2})/);
+                        if (m && /creat|date|time/i.test(txt)) textDate = dateFromExifString(m[1]) || dateFromIsoString(m[1]);
+                    } catch (e) {}
+                } else if (type === 'IEND') break;
+                if (len < 0 || dataStart + len + 4 > bytes.length + 12) break;
+                off = dataStart + len + 4; // data + CRC
+            }
+            if (textDate) { textDate.source = 'PNG'; return textDate; }
+            return findExifInBuffer(buf);
+        }
+
+        async function dateFromWebp(file) {
+            const buf = await file.slice(0, 1024 * 1024).arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            let off = 12; // RIFF + WEBP
+            const view = new DataView(buf);
+            while (off + 8 <= bytes.length) {
+                const type = String.fromCharCode(bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]);
+                const len = view.getUint32(off + 4, true);
+                if (type === 'EXIF' && len > 8) {
+                    const d = parseTiffForDate(new DataView(buf, off + 8, len)) || findExifInBuffer(buf.slice(off + 8, off + 8 + len));
+                    if (d) { d.source = 'EXIF'; return d; }
+                }
+                off += 8 + len + (len % 2);
+            }
+            return findExifInBuffer(buf);
+        }
+
+        // ---- MP4 / MOV (ISO BMFF + QuickTime) ----
+        function macEpochToDate(secs) {
+            if (!secs || secs === 0) return null;
+            const unix = secs - 2082844800; // 1904-01-01 -> 1970-01-01
+            if (unix < -2208988800 || unix > 4102444800) return null;
+            const dt = new Date(unix * 1000);
+            if (isNaN(dt)) return null;
+            // Use UTC fields: mvhd creation_time is stored in UTC, and using
+            // local fields could shift the day depending on timezone.
+            return validYMD(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+        }
+        function scanMp4TextForCreationDate(buf) {
+            const labelled = scanLabelledMediaDate(buf);
+            if (labelled) return labelled;
+            try {
+                const text = new TextDecoder('latin1').decode(buf);
+                const idx = text.indexOf('\u00a9day');
+                if (idx >= 0) {
+                    const near = text.slice(idx, idx + 80);
+                    const m = near.match(/((?:19|20)\d{2}-\d{2}-\d{2})/);
+                    if (m) { const d = dateFromIsoString(m[1]); if (d) return d; }
+                }
+            } catch (e) {}
+            return null;
+        }
+        function parseMp4Buffer(buf) {
+            const view = new DataView(buf);
+            const bytes = new Uint8Array(buf);
+            const typeAt = (o) => String.fromCharCode(bytes[o], bytes[o+1], bytes[o+2], bytes[o+3]);
+            let found = null;
+            const walk = (start, end, depth, inIlst) => {
+                if (found || depth > 6) return;
+                let off = start;
+                while (off + 8 <= end && off + 8 <= bytes.length) {
+                    let size = view.getUint32(off);
+                    const type = typeAt(off + 4);
+                    let header = 8;
+                    if (size === 1) { // 64-bit size
+                        if (off + 16 > bytes.length) break;
+                        size = Number(view.getBigUint64(off + 8));
+                        header = 16;
+                    } else if (size === 0) {
+                        size = end - off;
+                    }
+                    if (size < header || off + size > bytes.length + header) {
+                        // Box extends past this buffer slice (common when moov is
+                        // in the tail slice) - still try to walk its header area.
+                        if (['moov','udta','meta','ilst','trak','mdia'].includes(type)) {
+                            const innerStart = type === 'meta' ? off + header + 4 : off + header;
+                            walk(innerStart, Math.min(end, bytes.length), depth + 1);
+                        }
+                        break;
+                    }
+                    const content = off + header;
+                    if (type === 'mvhd' || type === 'mdhd') {
+                        try {
+                            const version = bytes[content];
+                            let secs = null;
+                            if (version === 1) secs = Number(view.getBigUint64(content + 4));
+                            else secs = view.getUint32(content + 4);
+                            const d = macEpochToDate(secs);
+                            if (d) { found = d; return; }
+                        } catch (e) {}
+                    } else if (type === 'moov' || type === 'udta' || type === 'trak' || type === 'mdia' || type === 'ilst') {
+                        walk(content, off + size, depth + 1, type === 'ilst');
+                        if (found) return;
+                    } else if (type === 'meta') {
+                        walk(content + 4, off + size, depth + 1); // skip version/flags
+                        if (found) return;
+                    } else if (type === '\u00a9day') {
+                        try {
+                            const txt = new TextDecoder('utf-8').decode(buf.slice(content, off + size));
+                            const d = dateFromIsoString(txt);
+                            if (d) { found = d; return; }
+                        } catch (e) {}
+                    } else if (inIlst && type !== 'data') {
+                        walk(content, off + size, depth + 1, true);
+                        if (found) return;
+                    } else if (type === 'data') {
+                        // Inside an ilst item: 4 bytes type + 4 bytes locale, then value
+                        try {
+                            const txt = new TextDecoder('utf-8').decode(buf.slice(content + 8, off + size));
+                            const d = dateFromIsoString(txt);
+                            if (d) { found = d; return; }
+                        } catch (e) {}
+                    }
+                    off += size;
+                }
+            };
+            walk(0, bytes.length, 0);
+            if (found) { found.source = 'Video metadata'; return found; }
+            const textDate = scanMp4TextForCreationDate(buf);
+            if (textDate) { if (!textDate.source) textDate.source = 'Video metadata'; return textDate; }
+            return null;
+        }
+        async function dateFromMp4(file) {
+            const CHUNK = 8 * 1024 * 1024;
+            if (file.size <= CHUNK * 2) {
+                return parseMp4Buffer(await file.arrayBuffer());
+            }
+            // Large file: moov is at the start (faststart) or the end. Check both.
+            const head = await file.slice(0, CHUNK).arrayBuffer();
+            let d = parseMp4Buffer(head);
+            if (d) return d;
+            const tail = await file.slice(file.size - CHUNK, file.size).arrayBuffer();
+            d = parseMp4Buffer(tail);
+            if (d) return d;
+            return null;
+        }
+
+        async function dateFromAvi(file) {
+            const buf = await file.slice(0, 512 * 1024).arrayBuffer();
+            const text = new TextDecoder('latin1').decode(buf);
+            const idx = text.indexOf('IDIT');
+            if (idx >= 0) {
+                const near = text.slice(idx, idx + 60);
+                // IDIT format: "Mon Jan 15 12:00:00 2023" or similar
+                const m = near.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})\s+\d{2}:\d{2}:\d{2}\s+((?:19|20)\d{2})/i);
+                if (m) { const d = validYMD(m[3], MONTH_MAP[m[1].substring(0,3).toLowerCase()], m[2]); if (d) { d.source = 'Video metadata'; return d; } }
+                const iso = dateFromIsoString(near);
+                if (iso) { iso.source = 'Video metadata'; return iso; }
+            }
+            return null;
+        }
+
+
+        async function dateFromMkv(file) {
+            const buf = await file.slice(0, 4 * 1024 * 1024).arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            const view = new DataView(buf);
+            for (let i = 0; i + 11 < bytes.length; i++) {
+                if (bytes[i] === 0x44 && bytes[i+1] === 0x61 && bytes[i+2] === 0x88) {
+                    try {
+                        const ns = view.getBigInt64(i + 3);
+                        const ms = Number(ns / 1000000n) + Date.UTC(2001, 0, 1);
+                        const dt = new Date(ms);
+                        const d = validYMD(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+                        if (d && dt.getUTCFullYear() >= 1990) { d.source = 'Media created'; return d; }
+                    } catch (e) {}
+                }
+            }
+            return scanLabelledMediaDate(buf);
+        }
+
+        async function dateFromAsf(file) {
+            const buf = await file.slice(0, 64 * 1024).arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            const view = new DataView(buf);
+            const guid = [0x8C,0xAB,0xDC,0xA1,0xA9,0x47,0x11,0xCF,0x8E,0xE4,0x00,0xC0,0x0C,0x20,0x53,0x65];
+            outer2:
+            for (let i = 0; i + 56 < bytes.length; i++) {
+                for (let j = 0; j < 16; j++) if (bytes[i+j] !== guid[j]) continue outer2;
+                try {
+                    const ft = view.getBigUint64(i + 48, true);
+                    if (ft === 0n) return null;
+                    const ms = Number(ft / 10000n) - 11644473600000;
+                    const dt = new Date(ms);
+                    const d = validYMD(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+                    if (d) { d.source = 'Media created'; return d; }
+                } catch (e) {}
+                return null;
+            }
+            return scanLabelledMediaDate(buf);
+        }
+
+        async function getMetadataDate(file, filename) {
+            const ext = (filename.split('.').pop() || '').toLowerCase();
+            try {
+                if (ext === 'jpg' || ext === 'jpeg') return await dateFromJpeg(file);
+                if (ext === 'png') return await dateFromPng(file);
+                if (ext === 'webp') return await dateFromWebp(file);
+                if (ext === 'tif' || ext === 'tiff') {
+                    const buf = await file.slice(0, 512 * 1024).arrayBuffer();
+                    const c = parseTiffCandidates(new DataView(buf)) || findExifCandidatesInBuffer(buf);
+                    if (c && c.original) return c.original;
+                    const media = scanLabelledMediaDate(buf);
+                    if (media) return media;
+                    if (c) return c.digitized || c.dateTime || null;
+                    return null;
+                }
+                if (['mp4','mov','m4v','3gp','3g2'].includes(ext)) return await dateFromMp4(file);
+                if (ext === 'avi') return await dateFromAvi(file);
+                if (['mkv','webm'].includes(ext)) return await dateFromMkv(file);
+                if (['wmv','asf'].includes(ext)) return await dateFromAsf(file);
+                if (['heic','heif','avif'].includes(ext)) {
+                    // HEIC stores EXIF as an item in the meta box; scanning for the
+                    // Exif header in head + tail covers most phone files.
+                    if (file.size <= 8 * 1024 * 1024) return findExifInBuffer(await file.arrayBuffer());
+                    const head = await file.slice(0, 2 * 1024 * 1024).arrayBuffer();
+                    let d = findExifInBuffer(head);
+                    if (d) return d;
+                    const tail = await file.slice(file.size - 2 * 1024 * 1024).arrayBuffer();
+                    return findExifInBuffer(tail);
+                }
+                const magic = await file.slice(0, 16).arrayBuffer();
+                const hb = new Uint8Array(magic);
+                if (hb[0] === 0xFF && hb[1] === 0xD8) return await dateFromJpeg(file);
+                if (hb[0] === 0x89 && hb[1] === 0x50) return await dateFromPng(file);
+                const headBuf = await file.slice(0, 1024 * 1024).arrayBuffer();
+                const gcands = findExifCandidatesInBuffer(headBuf);
+                if (gcands && gcands.original) return gcands.original;
+                const gmedia = scanLabelledMediaDate(headBuf);
+                if (gmedia) return gmedia;
+                if (gcands) return gcands.digitized || gcands.dateTime || null;
+                return null;
+            } catch (e) {
+                console.warn('Metadata read failed for', filename, e);
+                return null;
+            }
+        }
+
+        async function processHandle(handle, sourceRoot = null, relPath = '') {
+            // Fix: dedupe on the FULL PATH, not just the filename — two files
+            // with the same name in different subfolders are different files.
+            const key = (sourceRoot ? sourceRoot.name + '/' : '') + relPath + handle.name;
+            if (processedFiles.has(key)) return;
+
+            if (handle.kind === 'file') {
+                let dateInfo = null;
+                let source = null;
+                // Metadata first: the actual capture date inside the file.
+                try {
+                    const blob = await handle.getFile();
+                    const meta = await getMetadataDate(blob, handle.name);
+                    if (meta) { dateInfo = meta; source = meta.source || 'Metadata'; }
+                } catch (e) { /* fall through to filename */ }
+                if (!dateInfo) {
+                    const fromName = parseDateFromFilename(handle.name);
+                    if (fromName) { dateInfo = fromName; source = 'Filename'; }
+                }
+                let fileData = {
+                    handle: handle,
+                    sourceRoot: sourceRoot,
+                    originalName: handle.name,
+                    newName: null,
+                    year: null,
+                    source: source,
+                    status: 'pending',
+                    message: ''
+                };
+                if (dateInfo) {
+                    fileData.newName = generateNewName(handle.name, dateInfo);
+                    fileData.year = dateInfo.year;
+                    if (fileData.newName === handle.name) {
+                        fileData.newName = null;
+                        fileData.status = 'skipped';
+                        fileData.message = 'Already dated';
+                    }
+                } else {
+                    fileData.status = 'skipped';
+                    fileData.message = 'No date';
+                }
+                files.push(fileData);
+                processedFiles.add(key);
+            } else if (handle.kind === 'directory') {
+                try {
+                    for await (const entry of handle.values()) {
+                        await processHandle(entry, sourceRoot || handle, relPath + handle.name + '/');
+                    }
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        async function addFiles(handles) {
+            for (const h of handles) {
+                await processHandle(h, h.kind === 'directory' ? h : null);
+            }
+            renderFiles();
+            updateUIState();
+        }
+
+        // Fix: filenames were injected into innerHTML unescaped — a name with
+        // < or " in it broke the row layout. Escape before interpolating.
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function renderFiles() {
+            if (files.length === 0) {
+                fileListEl.innerHTML = '<div class="empty-state">No files selected. Select a folder or drag files here.</div>';
+                return;
+            }
+            fileListEl.innerHTML = '';
+            files.forEach(file => {
+                const el = document.createElement('div');
+                el.className = 'file-item';
+                const badge = (file.status === 'pending' && file.source) ? `<span class="source-badge${file.source === 'Filename' ? ' filename' : ''}">${escapeHtml(file.source)}</span>` : '';
+                const statusHtml = `<span class="status ${file.status}">${file.status === 'success' ? '✓ ' : ''}${file.message || 'Ready'}${badge}</span>`;
+                el.innerHTML = `
+                    <div class="file-name" title="${escapeHtml(file.originalName)}">${escapeHtml(file.originalName)}</div>
+                    <div class="file-name new-name">${escapeHtml(file.newName || '-')}</div>
+                    <div>${statusHtml}</div>
+                `;
+                fileListEl.appendChild(el);
+            });
+        }
+
+        function updateUIState() {
+            const pending = files.filter(f => f.status === 'pending');
+            processBtn.disabled = pending.length === 0;
+            processBtn.classList.toggle('primary', !processBtn.disabled);
+            clearBtn.disabled = files.length === 0;
+        }
+
+        function clearList() {
+            files = [];
+            processedFiles.clear();
+            rootDirectoryHandle = null; // Fix: was left set, leaking into later file picks
+            renderFiles();
+            updateUIState();
+        }
+
+        async function processRenames() {
+            const pendingFiles = files.filter(f => f.status === 'pending' && f.newName);
+            if (pendingFiles.length === 0) return;
+
+            const years = new Set(pendingFiles.map(f => f.year).filter(y => y));
+            const shouldOrganize = years.size > 1;
+
+            processBtn.disabled = true;
+            processBtn.innerHTML = `<span class="spinner"></span> Processing...`;
+
+            // Fix: if two files clean down to the same new name in the same
+            // destination, number the later ones — never overwrite a file.
+            const plannedNames = new Set();
+
+            for (const file of pendingFiles) {
+                try {
+                    // Fix: handles from "Select Files" arrive read-only in some
+                    // browsers; ask for readwrite before trying to move them.
+                    if (file.handle.requestPermission) {
+                        const perm = await file.handle.requestPermission({ mode: 'readwrite' });
+                        if (perm !== 'granted') throw new Error('Permission denied');
+                    }
+                    let finalName = file.newName;
+                    const destKeyBase = (file.sourceRoot ? file.sourceRoot.name + '/' : '') + (shouldOrganize && file.year ? file.year + '/' : '');
+                    if (plannedNames.has((destKeyBase + finalName).toLowerCase())) {
+                        const dot = finalName.lastIndexOf('.');
+                        const b = dot > 0 ? finalName.slice(0, dot) : finalName;
+                        const x = dot > 0 ? finalName.slice(dot) : '';
+                        let n = 2, cand = `${b} (${n})${x}`;
+                        while (plannedNames.has((destKeyBase + cand).toLowerCase())) cand = `${b} (${++n})${x}`;
+                        finalName = cand;
+                    }
+                    plannedNames.add((destKeyBase + finalName).toLowerCase());
+                    const destRoot = file.sourceRoot || rootDirectoryHandle;
+
+                    // Organize if multi-years AND we have a directory handle (Select Folder/Drop Folder)
+                    if (shouldOrganize && destRoot && file.year) {
+                        try {
+                            const yearDir = await destRoot.getDirectoryHandle(file.year, { create: true });
+                            await file.handle.move(yearDir, finalName);
+                            file.message = `Moved to /${file.year}/`;
+                        } catch (err) {
+                            // If move fails (e.g. Permission denied to create folder), try rename in place
+                            await file.handle.move(finalName);
+                            file.message = 'Renamed (Folder denied)';
+                        }
+                    } else {
+                        // Rename in place
+                        await file.handle.move(finalName);
+                        file.message = 'Renamed';
+                    }
+                    file.status = 'success';
+                    file.originalName = finalName;
+                    file.newName = null;
+                } catch (err) {
+                    file.status = 'error';
+                    file.message = 'Error: ' + (err.message || err.name || 'failed'); // Fix: show the real reason, not just "Error"
+                    console.error("Move failed:", err);
+                }
+            }
+            renderFiles();
+            updateUIState();
+            processBtn.innerHTML = 'Rename All';
+
+            if (shouldOrganize && !rootDirectoryHandle && pendingFiles.some(f => !f.sourceRoot)) {
+                showToast("Note: Dropped files were renamed in-place (Browser root required for folders)");
+            }
+        }
+
+        function showToast(msg) {
+            toastMsg.textContent = msg;
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.classList.remove('show'), 4000);
+        }
+
+        document.getElementById('openFolderBtn').addEventListener('click', async () => {
+            try {
+                rootDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                files = []; processedFiles.clear();
+                await addFiles([rootDirectoryHandle]);
+            } catch (e) { }
+        });
+
+        document.getElementById('openFilesBtn').addEventListener('click', async () => {
+            try {
+                const handles = await window.showOpenFilePicker({ multiple: true });
+                await addFiles(handles);
+            } catch (e) { }
+        });
+
+        processBtn.addEventListener('click', processRenames);
+        clearBtn.addEventListener('click', clearList);
+
+        const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(n => document.body.addEventListener(n, prevent));
+        document.body.addEventListener('dragenter', () => appContainer.classList.add('drag-active'));
+        document.body.addEventListener('dragleave', () => appContainer.classList.remove('drag-active'));
+        document.body.addEventListener('drop', async (e) => {
+            appContainer.classList.remove('drag-active');
+            const handlePromises = [...e.dataTransfer.items].filter(i => i.kind === 'file').map(i => i.getAsFileSystemHandle());
+            const handles = (await Promise.all(handlePromises)).filter(h => h);
+            if (handles.length > 0) await addFiles(handles);
+        });
+
+        // Exposed only so the date/name logic can be unit-tested; no UI effect.
+        window.ChronoCore = { parseDateFromFilename, generateNewName, isValidDate, getMetadataDate, parseTiffForDate, parseTiffCandidates, parseMp4Buffer, scanLabelledMediaDate, validYMD };
+    </script>
+</body>
+
+</html>
