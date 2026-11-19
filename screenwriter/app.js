@@ -207,6 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyZoom(savedZoom);
 
     if (store.get('screenflow_sidebar_collapsed') === 'true') collapseSidebar(false);
+    else if (store.get('screenflow_sidebar_collapsed') === null && window.innerWidth <= 1024) collapseSidebar(false); // first visit on a phone/tablet: land on the editor
 
     setupEventListeners();
     document.documentElement.classList.remove('sidebar-is-collapsed-init', 'disable-highlights-init', 'hide-stats-init');

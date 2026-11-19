@@ -24,7 +24,8 @@
         var t = localStorage.getItem('screenflow_theme');
         document.documentElement.classList.remove('dark-theme', 'light-theme');
         document.documentElement.classList.add(t === 'light-theme' ? 'light-theme' : 'dark-theme');
-        if (localStorage.getItem('screenflow_sidebar_collapsed') === 'true')
+        var sbPref = localStorage.getItem('screenflow_sidebar_collapsed');
+        if (sbPref === 'true' || (sbPref === null && window.innerWidth <= 1024))
           document.documentElement.classList.add('sidebar-is-collapsed-init');
         if (localStorage.getItem('screenflow_setting_highlights') === 'false')
           document.documentElement.classList.add('disable-highlights-init');

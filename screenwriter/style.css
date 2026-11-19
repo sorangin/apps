@@ -72,6 +72,7 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   height: 100vh;
+  height: 100dvh; /* visible height on mobile browsers; 100vh alone overshoots */
   overflow: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -91,6 +92,7 @@ kbd {
 .app-container {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   position: relative;
   overflow: hidden;
@@ -516,6 +518,7 @@ html.light-theme .btn-icon:hover {
 /* --- Main Workspace Area --- */
 .main-workspace {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -1921,4 +1924,39 @@ html.hide-stats-init #footer-stat-words ~ .divider {
 @media print {
   .paper { background-image: none !important; }
   .find-bar, .toast, .sidebar-scrim, #expand-sidebar-btn { display: none !important; }
+}
+
+/* ==========================================================================
+   v2.1 mobile footer fix: the menu button must always be reachable.
+   On phones the footer drops its text stats, keeps one non-wrapping row,
+   and gives Save / Menu full-size touch targets.
+   ========================================================================== */
+.workspace-footer { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.footer-right { flex-shrink: 0; }
+.footer-left { flex-shrink: 1; min-width: 0; }
+#format-picker-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 768px) {
+  .workspace-footer {
+    flex-wrap: nowrap;
+    height: auto;
+    min-height: 52px;
+    padding: 6px 10px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  /* Drop the text stats on phones: pages/words still live in the sidebar stats */
+  #footer-stat-pages, #footer-stat-words, .workspace-footer .divider { display: none !important; }
+  /* Save status becomes just its colored dot */
+  .auto-save-status { font-size: 0; gap: 0; }
+  .auto-save-status::before { width: 8px; height: 8px; }
+  /* Full-size touch targets, never shrunk off-screen */
+  .workspace-footer .btn-save-pdf,
+  .workspace-footer .btn-icon {
+    width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px;
+  }
+  .workspace-footer .btn-save-pdf svg,
+  .workspace-footer .btn-icon svg { width: 20px; height: 20px; }
+  .btn-save-pdf { width: 40px; height: 40px; }
+  .format-picker-btn { max-width: 46vw; height: 40px; }
+  .menu-dropdown { max-height: 70vh; max-height: 70dvh; overflow-y: auto; }
 }
