@@ -594,7 +594,28 @@ function timerToggleFn(){
 timerToggle.addEventListener("click",function(e){ e.stopPropagation(); timerToggleFn(); });
 
 /* timer edit */
-function openTimerEdit(){
+var editMeasureCtx=null;
+function placeEditCaret(clickX){
+  // Put the caret at the character boundary nearest the tap, instead of selecting all.
+  var text=timerEdit.value;
+  if(!text) return;
+  var rect=timerEdit.getBoundingClientRect();
+  if(!rect.width) return;
+  if(!editMeasureCtx) editMeasureCtx=document.createElement("canvas").getContext("2d");
+  var cs=getComputedStyle(timerEdit);
+  editMeasureCtx.font=cs.font;
+  try{ editMeasureCtx.letterSpacing=cs.letterSpacing; }catch(e){}
+  var totalW=editMeasureCtx.measureText(text).width;
+  var startX=rect.left+(rect.width-totalW)/2;
+  var x=clickX-startX, best=0, bestDist=Infinity;
+  for(var i=0;i<=text.length;i++){
+    var w=i===0?0:editMeasureCtx.measureText(text.slice(0,i)).width;
+    var d=Math.abs(x-w);
+    if(d<bestDist){ bestDist=d; best=i; }
+  }
+  try{ timerEdit.setSelectionRange(best,best); }catch(e){}
+}
+function openTimerEdit(clickX){
   if(tFinished){ dismissTimer(); return; }
   // Editing pauses
   if(tEndAt!=null){
@@ -606,7 +627,10 @@ function openTimerEdit(){
   timerEdit.value=formatTimerEdit(total);
   timerDisplay.hidden=true; timerEdit.hidden=false;
   renderTimer();
-  setTimeout(function(){ timerEdit.focus(); timerEdit.select(); },30);
+  setTimeout(function(){
+    timerEdit.focus();
+    if(typeof clickX==="number") placeEditCaret(clickX);
+  },30);
 }
 function closeTimerEdit(revert){
   timerEditing=false;
@@ -625,7 +649,7 @@ function confirmTimerEdit(){
 timerDisplay.addEventListener("click",function(e){
   e.stopPropagation();
   if(tFinished){ dismissTimer(); syncWake(); return; }
-  openTimerEdit();
+  openTimerEdit(e.clientX);
 });
 timerEdit.addEventListener("keydown",function(e){
   if(e.key==="Enter"){ e.preventDefault(); confirmTimerEdit(); }
