@@ -102,9 +102,18 @@
     min-width:200px;
     background:transparent; border:none; outline:none; text-align:center;
     color:var(--accent);
+    caret-color:transparent;
     font-family:inherit;
     padding:0;
   }
+  /* Custom caret for the timer edit box: drawn exactly where the user taps,
+     instead of snapping to the nearest character edge like a native caret. */
+  .timer-edit-caret{
+    position:absolute; top:0; height:100%; width:3px; margin-left:-1px;
+    background:var(--accent); pointer-events:none;
+    animation:caretBlink 1.06s steps(1) infinite;
+  }
+  @keyframes caretBlink{ 0%,49%{opacity:1;} 50%,100%{opacity:0;} }
   /* #end-time-display */
   .status-line{
     font-size:0.9rem;
@@ -302,6 +311,7 @@
           <div class="timer-edit-wrap">
             <button type="button" id="timerDisplay" class="timer-display tabular" aria-label="Edit timer duration">20:00</button>
             <input id="timerEdit" class="timer-edit-input" hidden autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Timer duration, hours minutes seconds" />
+            <div id="timerEditCaret" class="timer-edit-caret" hidden></div>
           </div>
           <div class="status-line" id="timerStatus" aria-live="polite"></div>
         </div>
@@ -594,26 +604,53 @@ function timerToggleFn(){
 timerToggle.addEventListener("click",function(e){ e.stopPropagation(); timerToggleFn(); });
 
 /* timer edit */
+var timerEditCaret=$("timerEditCaret");
 var editMeasureCtx=null;
-function placeEditCaret(clickX){
-  // Put the caret at the character boundary nearest the tap, instead of selecting all.
+function editTextLayout(){
+  // Character boundary offsets of the edit text, plus where the centered text
+  // starts, measured relative to the edit wrap (the caret's offset parent).
   var text=timerEdit.value;
-  if(!text) return;
   var rect=timerEdit.getBoundingClientRect();
-  if(!rect.width) return;
+  if(!rect.width) return null;
+  var wrapRect=timerEdit.parentNode.getBoundingClientRect();
   if(!editMeasureCtx) editMeasureCtx=document.createElement("canvas").getContext("2d");
   var cs=getComputedStyle(timerEdit);
   editMeasureCtx.font=cs.font;
   try{ editMeasureCtx.letterSpacing=cs.letterSpacing; }catch(e){}
-  var totalW=editMeasureCtx.measureText(text).width;
-  var startX=rect.left+(rect.width-totalW)/2;
-  var x=clickX-startX, best=0, bestDist=Infinity;
-  for(var i=0;i<=text.length;i++){
-    var w=i===0?0:editMeasureCtx.measureText(text.slice(0,i)).width;
-    var d=Math.abs(x-w);
+  var widths=[0];
+  for(var i=1;i<=text.length;i++) widths.push(editMeasureCtx.measureText(text.slice(0,i)).width);
+  var totalW=widths[text.length];
+  return { widths:widths, totalW:totalW,
+    startInWrap:(rect.left-wrapRect.left)+(rect.width-totalW)/2,
+    wrapLeft:wrapRect.left };
+}
+function showEditCaret(leftInWrap){
+  timerEditCaret.style.left=leftInWrap+"px";
+  timerEditCaret.hidden=false;
+}
+function syncEditCaret(){
+  // Follow the logical caret (typing, arrow keys) with the drawn caret.
+  if(!timerEditing){ timerEditCaret.hidden=true; return; }
+  var layout=editTextLayout();
+  if(!layout){ timerEditCaret.hidden=true; return; }
+  var s=timerEdit.selectionStart;
+  if(s==null||s!==timerEdit.selectionEnd){ timerEditCaret.hidden=true; return; }
+  showEditCaret(layout.startInWrap+layout.widths[s]);
+}
+function placeEditCaret(clickX){
+  // Drawn caret goes exactly at the tap; the logical caret takes the nearest
+  // character boundary (a text field can only insert between characters).
+  var layout=editTextLayout();
+  if(!layout) return;
+  var xInWrap=clickX-layout.wrapLeft;
+  var clamped=Math.max(layout.startInWrap,Math.min(layout.startInWrap+layout.totalW,xInWrap));
+  var x=xInWrap-layout.startInWrap, best=0, bestDist=Infinity;
+  for(var i=0;i<layout.widths.length;i++){
+    var d=Math.abs(x-layout.widths[i]);
     if(d<bestDist){ bestDist=d; best=i; }
   }
   try{ timerEdit.setSelectionRange(best,best); }catch(e){}
+  showEditCaret(clamped);
 }
 function openTimerEdit(clickX){
   if(tFinished){ dismissTimer(); return; }
@@ -630,10 +667,12 @@ function openTimerEdit(clickX){
   setTimeout(function(){
     timerEdit.focus();
     if(typeof clickX==="number") placeEditCaret(clickX);
+    else syncEditCaret();
   },30);
 }
 function closeTimerEdit(revert){
   timerEditing=false;
+  timerEditCaret.hidden=true;
   timerEdit.hidden=true; timerDisplay.hidden=false;
   if(revert) renderTimer();
 }
@@ -641,6 +680,7 @@ function confirmTimerEdit(){
   if(!timerEditing) return;
   var total=parseTimerInput(timerEdit.value);
   timerEditing=false;
+  timerEditCaret.hidden=true;
   timerEdit.hidden=true; timerDisplay.hidden=false;
   if(total==null){ renderTimer(); return; }
   activePreset=null; renderPresets();
@@ -657,7 +697,13 @@ timerEdit.addEventListener("keydown",function(e){
   e.stopPropagation();
 });
 timerEdit.addEventListener("blur",function(){ if(timerEditing) confirmTimerEdit(); });
-timerEdit.addEventListener("click",function(e){ e.stopPropagation(); });
+timerEdit.addEventListener("click",function(e){
+  e.stopPropagation();
+  if(timerEditing) placeEditCaret(e.clientX);
+});
+timerEdit.addEventListener("input",function(){ syncEditCaret(); });
+timerEdit.addEventListener("keyup",function(){ syncEditCaret(); });
+timerEdit.addEventListener("focus",function(){ if(timerEditing) syncEditCaret(); });
 // Tap anywhere dismisses finished state (timer view)
 $("view-timer").addEventListener("click",function(){ if(tFinished){ dismissTimer(); syncWake(); } });
 
@@ -711,7 +757,7 @@ function renderPresets(){
     b.appendChild(num);
     b.appendChild(document.createTextNode("m"));
     b.addEventListener("click",function(){
-      activePreset=i; timerEditing=false; timerEdit.hidden=true; timerDisplay.hidden=false;
+      activePreset=i; timerEditing=false; timerEditCaret.hidden=true; timerEdit.hidden=true; timerDisplay.hidden=false;
       applyDuration(Math.round(p*60),true); renderPresets();
     });
     presetGrid.appendChild(b);
