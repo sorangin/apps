@@ -605,20 +605,31 @@ timerToggle.addEventListener("click",function(e){ e.stopPropagation(); timerTogg
 
 /* timer edit */
 var timerEditCaret=$("timerEditCaret");
-var editMeasureCtx=null;
+var editMirror=null;
 function editTextLayout(){
   // Character boundary offsets of the edit text, plus where the centered text
   // starts, measured relative to the edit wrap (the caret's offset parent).
+  // Measured with a mirror element in the real layout engine: canvas text
+  // metrics do not reliably reproduce this input's font stack.
   var text=timerEdit.value;
   var rect=timerEdit.getBoundingClientRect();
   if(!rect.width) return null;
   var wrapRect=timerEdit.parentNode.getBoundingClientRect();
-  if(!editMeasureCtx) editMeasureCtx=document.createElement("canvas").getContext("2d");
+  if(!editMirror){
+    editMirror=document.createElement("div");
+    editMirror.style.cssText="position:absolute;left:0;top:0;visibility:hidden;white-space:pre;pointer-events:none;";
+    document.body.appendChild(editMirror);
+  }
   var cs=getComputedStyle(timerEdit);
-  editMeasureCtx.font=cs.font;
-  try{ editMeasureCtx.letterSpacing=cs.letterSpacing; }catch(e){}
+  editMirror.style.fontSize=cs.fontSize;
+  editMirror.style.fontWeight=cs.fontWeight;
+  editMirror.style.fontFamily=cs.fontFamily;
+  editMirror.style.letterSpacing=cs.letterSpacing;
   var widths=[0];
-  for(var i=1;i<=text.length;i++) widths.push(editMeasureCtx.measureText(text.slice(0,i)).width);
+  for(var i=1;i<=text.length;i++){
+    editMirror.textContent=text.slice(0,i);
+    widths.push(editMirror.getBoundingClientRect().width);
+  }
   var totalW=widths[text.length];
   return { widths:widths, totalW:totalW,
     startInWrap:(rect.left-wrapRect.left)+(rect.width-totalW)/2,
@@ -703,7 +714,6 @@ timerEdit.addEventListener("click",function(e){
 });
 timerEdit.addEventListener("input",function(){ syncEditCaret(); });
 timerEdit.addEventListener("keyup",function(){ syncEditCaret(); });
-timerEdit.addEventListener("focus",function(){ if(timerEditing) syncEditCaret(); });
 // Tap anywhere dismisses finished state (timer view)
 $("view-timer").addEventListener("click",function(){ if(tFinished){ dismissTimer(); syncWake(); } });
 
