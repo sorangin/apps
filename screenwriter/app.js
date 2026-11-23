@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatOptions = document.querySelectorAll('.format-option');
   const btnExportPdf = $('btn-export-pdf');
   const btnExportFountain = $('btn-export-fountain');
+  const btnDictate = $('btn-dictate');
   const btnOpenScript = $('btn-open-script');
   const importFountainFile = $('import-fountain-file');
   const btnNewScript = $('btn-new-script');
@@ -306,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Title page saved');
     });
 
+    if (btnDictate) btnDictate.addEventListener('click', toggleDictation);
     if (btnExportPdf) btnExportPdf.addEventListener('click', () => { closeMenu(); saveAsPDF(); });
     btnExportFountain.addEventListener('click', exportFountainText);
     if (btnOpenScript) btnOpenScript.addEventListener('click', () => { closeMenu(); importFountainText(); });
@@ -1576,6 +1578,102 @@ document.addEventListener('DOMContentLoaded', () => {
     scheduleAnalysis(); triggerAutoSave();
     refreshFindHits(false);
     showToast(count ? `Replaced ${count} match${count === 1 ? '' : 'es'}` : 'No matches to replace');
+  }
+
+  // ================= Voice dictation =================
+  // One tap starts listening, the next tap stops. Final transcripts are
+  // inserted at the caret in the current block. Chrome pauses recognition
+  // after a silence gap, so onend restarts it while the user still wants
+  // to dictate. No interim results: the line only lands once it is final,
+  // which keeps the caret math simple and the text stable.
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let dictating = false;
+  let dictateWanted = false;
+
+  function setDictateUI(on) {
+    if (!btnDictate) return;
+    btnDictate.classList.toggle('recording', on);
+    btnDictate.setAttribute('aria-pressed', String(on));
+    btnDictate.title = on ? 'Listening... tap to stop' : 'Dictate with your voice';
+  }
+  function toggleDictation() {
+    if (!SpeechRecognitionCtor) {
+      showToast('Voice dictation is not available in this browser. Try opening this page in Chrome.', 4200);
+      return;
+    }
+    if (dictateWanted) { stopDictation(); return; }
+    startDictation();
+  }
+  function startDictation() {
+    recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (ev) => {
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        if (ev.results[i].isFinal) insertDictatedText(ev.results[i][0].transcript);
+      }
+    };
+    recognition.onerror = (ev) => {
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+        dictateWanted = false;
+        showToast('Microphone is blocked. Allow microphone access for this site, then tap the mic again.', 5000);
+      } else if (ev.error === 'audio-capture') {
+        dictateWanted = false;
+        showToast('No microphone was found on this device.', 4000);
+      } else if (ev.error === 'network') {
+        showToast('Dictation needs an internet connection.', 4000);
+      }
+      // 'no-speech' and 'aborted' are routine: onend handles the restart.
+    };
+    recognition.onend = () => {
+      dictating = false;
+      if (dictateWanted) {
+        try { recognition.start(); dictating = true; return; } catch (e) { /* fall through to off state */ }
+      }
+      setDictateUI(false);
+    };
+    dictateWanted = true;
+    try {
+      recognition.start();
+      dictating = true;
+      setDictateUI(true);
+      showToast('Listening... tap the mic again to stop.');
+    } catch (e) {
+      dictateWanted = false;
+      setDictateUI(false);
+    }
+    editor.focus();
+  }
+  function stopDictation() {
+    dictateWanted = false;
+    if (recognition && dictating) { try { recognition.stop(); } catch (e) {} }
+    dictating = false;
+    setDictateUI(false);
+    editor.focus();
+  }
+  function insertDictatedText(raw) {
+    const text = (raw || '').trim();
+    if (!text) return;
+    let block = getCurrentBlock() || activeBlock;
+    if (!block || !editor.contains(block)) block = editor.querySelector('.element');
+    if (!block) return;
+    editor.focus();
+    if (getCurrentBlock() !== block) setCaret(block, block.textContent.length);
+    const offset = caretOffsetIn(block);
+    const before = block.textContent.substring(0, offset);
+    const after = block.textContent.substring(offset);
+    let insertion = text;
+    if (before.trim() === '') {
+      insertion = insertion.charAt(0).toUpperCase() + insertion.slice(1);
+    } else if (!/\s$/.test(before)) {
+      insertion = ' ' + insertion;
+    }
+    if (after && !/^\s/.test(after)) insertion += ' ';
+    block.textContent = before + insertion + after;
+    setCaret(block, offset + insertion.length);
+    afterStructureChange(block);
   }
 
   // ================= PDF export =================

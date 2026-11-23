@@ -1960,3 +1960,14 @@ html.hide-stats-init #footer-stat-words ~ .divider {
   .format-picker-btn { max-width: 46vw; height: 40px; }
   .menu-dropdown { max-height: 70vh; max-height: 70dvh; overflow-y: auto; }
 }
+
+/* Dictation: the mic button turns red and pulses while listening */
+#btn-dictate.recording {
+  background-color: var(--danger-color);
+  color: #ffffff;
+  animation: micPulse 1.2s ease-in-out infinite;
+}
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.45); }
+  50% { box-shadow: 0 0 0 7px rgba(244, 63, 94, 0); }
+}
